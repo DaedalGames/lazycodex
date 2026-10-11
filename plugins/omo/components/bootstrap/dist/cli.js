@@ -846,7 +846,8 @@ function defaultVersionProbe(binaryPath) {
   return String(execFileSync(binaryPath, ["--version"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
-    timeout: SG_VERSION_PROBE_TIMEOUT_MS
+    timeout: SG_VERSION_PROBE_TIMEOUT_MS,
+    windowsHide: true
   }));
 }
 function probePasses(binaryPath, deps) {
@@ -12164,7 +12165,7 @@ function isKnownNonGitBashLauncher(path) {
 }
 function whereCommand(command) {
   try {
-    return execFileSync2("where", [command], { encoding: "utf8" }).split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0);
+    return execFileSync2("where", [command], { encoding: "utf8", windowsHide: true }).split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0);
   } catch (error) {
     if (error instanceof Error)
       return [];

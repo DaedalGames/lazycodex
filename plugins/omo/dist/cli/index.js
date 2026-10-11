@@ -64,7 +64,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "5.1.29",
+    version: "5.1.30",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -241,7 +241,7 @@ var init_package = __esm(() => {
     },
     devDependencies: {
       "@clack/prompts": "^1.8.1",
-      "@code-yeongyu/senpi": "2026.10.10-11",
+      "@code-yeongyu/senpi": "2026.10.11",
       "@modelcontextprotocol/sdk": "^1.30.0",
       "@oh-my-opencode/agents-md-core": "workspace:*",
       "@oh-my-opencode/ast-grep-mcp": "workspace:*",
@@ -283,6 +283,7 @@ var init_package = __esm(() => {
       "@types/js-yaml": "^4.0.9",
       "@types/picomatch": "^4.0.3",
       "@typescript/native-preview": "7.0.0-dev.20260707.2",
+      "@typescript/typescript6": "6.0.2",
       "@xterm/addon-unicode11": "^0.9.0",
       "@xterm/xterm": "^6.0.0",
       "bun-types": "1.4.2",
@@ -299,18 +300,18 @@ var init_package = __esm(() => {
       typescript: "^7.0.2"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "5.1.29",
-      "oh-my-opencode-darwin-x64": "5.1.29",
-      "oh-my-opencode-darwin-x64-baseline": "5.1.29",
-      "oh-my-opencode-linux-arm64": "5.1.29",
-      "oh-my-opencode-linux-arm64-musl": "5.1.29",
-      "oh-my-opencode-linux-x64": "5.1.29",
-      "oh-my-opencode-linux-x64-baseline": "5.1.29",
-      "oh-my-opencode-linux-x64-musl": "5.1.29",
-      "oh-my-opencode-linux-x64-musl-baseline": "5.1.29",
-      "oh-my-opencode-windows-arm64": "5.1.29",
-      "oh-my-opencode-windows-x64": "5.1.29",
-      "oh-my-opencode-windows-x64-baseline": "5.1.29"
+      "oh-my-opencode-darwin-arm64": "5.1.30",
+      "oh-my-opencode-darwin-x64": "5.1.30",
+      "oh-my-opencode-darwin-x64-baseline": "5.1.30",
+      "oh-my-opencode-linux-arm64": "5.1.30",
+      "oh-my-opencode-linux-arm64-musl": "5.1.30",
+      "oh-my-opencode-linux-x64": "5.1.30",
+      "oh-my-opencode-linux-x64-baseline": "5.1.30",
+      "oh-my-opencode-linux-x64-musl": "5.1.30",
+      "oh-my-opencode-linux-x64-musl-baseline": "5.1.30",
+      "oh-my-opencode-windows-arm64": "5.1.30",
+      "oh-my-opencode-windows-x64": "5.1.30",
+      "oh-my-opencode-windows-x64-baseline": "5.1.30"
     },
     overrides: {
       hono: "^4.13.8",
@@ -5083,6 +5084,9 @@ function resolveStdio(options) {
   }
   return [options.stdin ?? "ignore", options.stdout ?? "pipe", options.stderr ?? "inherit"];
 }
+function createBunSpawnOptions(options) {
+  return { ...options, windowsHide: true };
+}
 function createNodeSpawnOptions(options, platform = process.platform) {
   const nodeOptions = {
     stdio: resolveStdio(options),
@@ -5171,7 +5175,7 @@ function spawn(cmdOrOpts, opts) {
   const { cmd, opts: options } = resolveCommand(cmdOrOpts, opts);
   const bun = getBunRuntime();
   if (bun)
-    return wrapBunProcess(bun.spawn(cmd, options));
+    return wrapBunProcess(bun.spawn(cmd, createBunSpawnOptions(options)));
   const [bin, ...args] = cmd;
   if (!bin)
     throw new Error("spawn requires a command");
@@ -5316,7 +5320,7 @@ function isKnownNonGitBashLauncher(path) {
 }
 function whereCommand(command) {
   try {
-    return execFileSync("where", [command], { encoding: "utf8" }).split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0);
+    return execFileSync("where", [command], { encoding: "utf8", windowsHide: true }).split(/\r?\n/).map((line) => line.trim()).filter((line) => line.length > 0);
   } catch (error) {
     if (error instanceof Error)
       return [];
@@ -5759,7 +5763,8 @@ function defaultVersionProbe(binaryPath) {
   return String(execFileSync2(binaryPath, ["--version"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
-    timeout: SG_VERSION_PROBE_TIMEOUT_MS
+    timeout: SG_VERSION_PROBE_TIMEOUT_MS,
+    windowsHide: true
   }));
 }
 function probePasses(binaryPath, deps) {
@@ -7462,10 +7467,11 @@ var init_category_model_requirements = __esm(() => {
         },
         { providers: ["xiaomi", "opencode-go"], model: "mimo-v2.6-pro", variant: "max" },
         { providers: ["xai", "github-copilot", "opencode-go"], model: "grok-4.7", variant: "xhigh" },
+        { providers: ["openai", "chatgpt-subscription"], model: "gpt-6.1-sol", variant: "medium" },
         {
           providers: ["openai", "chatgpt-subscription", "github-copilot", "opencode"],
-          model: "gpt-5.6-terra",
-          variant: "high"
+          model: "gpt-5.6-sol",
+          variant: "medium"
         },
         {
           providers: ["anthropic", "anthropic-api", "github-copilot", "opencode"],
@@ -89894,7 +89900,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "5.1.29",
+    version: "5.1.30",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -110304,6 +110310,917 @@ function createMcpOAuthCommand() {
   return mcp;
 }
 
+// packages/omo-opencode/src/cli/service-auth/browser.ts
+import { execFile as execFile5 } from "child_process";
+var execute = (file, args, env) => new Promise((resolve) => {
+  execFile5(file, [...args], { env, timeout: 1e4, windowsHide: true }, (error) => resolve(error === null));
+});
+async function openSignInBrowser(url, executeBrowser = execute, platform = process.platform, environment = process.env) {
+  const env = {};
+  for (const key of ["PATH", "Path", "HOME", "USERPROFILE", "SystemRoot", "WINDIR", "DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS"]) {
+    const value = environment[key];
+    if (value !== undefined)
+      env[key] = value;
+  }
+  if (platform === "darwin")
+    return executeBrowser("/usr/bin/open", [url], env);
+  if (platform === "win32")
+    return executeBrowser("rundll32.exe", ["url.dll,FileProtocolHandler", url], env);
+  if (platform === "linux" && (env.DISPLAY || env.WAYLAND_DISPLAY))
+    return executeBrowser("xdg-open", [url], env);
+  return false;
+}
+
+// packages/omo-opencode/src/cli/service-auth/device-name.ts
+import { hostname } from "os";
+
+// packages/omo-opencode/src/cli/service-auth/protocol.ts
+init_zod();
+
+// packages/omo-opencode/src/cli/service-auth/terminal-text.ts
+import { stripVTControlCharacters as stripVTControlCharacters4 } from "util";
+function terminalText(value) {
+  return stripVTControlCharacters4(value).replace(/[\p{C}\p{Zl}\p{Zp}]/gu, "");
+}
+
+// packages/omo-opencode/src/cli/service-auth/protocol.ts
+class SignInError extends Error {
+  retryable;
+  name = "SignInError";
+  constructor(message, retryable = false) {
+    super(message);
+    this.retryable = retryable;
+  }
+}
+
+class RequestFailure extends SignInError {
+  notSent;
+  constructor(notSent) {
+    super("Unable to complete the service request. Check the connection and retry.", true);
+    this.notSent = notSent;
+  }
+}
+var platformSchema = _enum(["macos", "linux", "windows"]);
+var nonempty = string2().min(1);
+var timestamp = string2().datetime({ offset: true });
+var tokenSchema = object({
+  accessToken: nonempty,
+  accessTokenExpiresAt: timestamp,
+  refreshToken: nonempty
+});
+var grantSchema = tokenSchema.extend({
+  device: object({ id: nonempty, name: nonempty }),
+  offlineGrant: nonempty.optional()
+});
+var credentialSchema = grantSchema.extend({
+  signingPrivateKey: nonempty,
+  sealingPrivateKey: nonempty,
+  refreshState: literal("uncertain").optional()
+});
+var deviceCodeSchema = object({
+  deviceCode: string2().regex(/^dc\.[A-Za-z0-9_-]{43}$/),
+  userCode: string2().regex(/^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$/),
+  matchingCode: string2().regex(/^\d{3} \d{3}$/),
+  verificationUri: string2().transform(terminalText).pipe(string2().url()),
+  expiresAt: timestamp,
+  intervalSeconds: number2().int().min(1).max(60)
+});
+var envelopeSchema = object({
+  error: object({
+    code: nonempty,
+    message: string2(),
+    retryable: boolean2(),
+    requestId: string2(),
+    detail: unknown().optional()
+  })
+});
+var limitSchema = object({
+  reason: literal("device_limit"),
+  managementToken: nonempty,
+  used: number2().int().nonnegative(),
+  limit: number2().int().nonnegative()
+});
+var deviceListSchema = object({
+  devices: array(object({ id: nonempty, name: nonempty, revokedAt: timestamp.nullable() }))
+});
+
+class ApiRefusal extends SignInError {
+  status;
+  code;
+  #detail;
+  #retryAfter;
+  constructor(code, status, detail, retryAfter = null) {
+    super("The service refused this request. Sign in again or check your account.", status === 429 || status >= 500);
+    this.status = status;
+    this.code = [
+      "unauthorized",
+      "account_deleted",
+      "reauth_required",
+      "invalid_grant",
+      "entitlement_required",
+      "authorization_pending",
+      "slow_down",
+      "access_denied",
+      "expired_token",
+      "rate_limited",
+      "internal",
+      "unavailable",
+      "forbidden",
+      "invalid_request",
+      "not_found"
+    ].includes(code) ? code : "unknown";
+    this.#detail = detail;
+    this.#retryAfter = retryAfter;
+  }
+  get detail() {
+    return this.#detail;
+  }
+  retryDelay(now, fallback) {
+    const raw = this.#retryAfter;
+    const delay = raw === null ? Number.NaN : /^\d+$/.test(raw) ? Number(raw) * 1000 : Date.parse(raw) - now;
+    return Math.min(60000, Math.max(fallback, Number.isFinite(delay) ? delay : fallback));
+  }
+}
+function parseReply(schema, value) {
+  const result = schema.safeParse(value);
+  if (!result.success)
+    throw new SignInError("The service returned an invalid response.");
+  return result.data;
+}
+function serviceOrigin(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new SignInError("Invalid service URL.");
+  }
+  const loopback = url.protocol === "http:" && url.hostname === "127.0.0.1" && url.port !== "";
+  if (url.protocol !== "https:" && !loopback || url.username || url.password || url.search || url.hash || url.pathname !== "/") {
+    throw new SignInError("Service URLs must be HTTPS origins, or http://127.0.0.1:<port> for local testing.");
+  }
+  return url.origin;
+}
+async function requestApi(api, path, init, signal) {
+  let response;
+  let body;
+  try {
+    response = await fetch(`${api}${path}`, {
+      ...init,
+      redirect: "error",
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30000)]) : AbortSignal.timeout(30000)
+    });
+  } catch (error) {
+    const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
+    const code = cause instanceof Error ? Reflect.get(cause, "code") : undefined;
+    throw new RequestFailure(typeof code === "string" && [
+      "ENOTFOUND",
+      "ECONNREFUSED",
+      "ENETUNREACH",
+      "EHOSTUNREACH",
+      "EAI_AGAIN",
+      "ConnectionRefused",
+      "EADDRNOTAVAIL",
+      "ENETDOWN",
+      "EHOSTDOWN",
+      "UND_ERR_CONNECT_TIMEOUT",
+      "ERR_TLS_HANDSHAKE_TIMEOUT",
+      "DEPTH_ZERO_SELF_SIGNED_CERT",
+      "CERT_HAS_EXPIRED",
+      "ERR_TLS_CERT_ALTNAME_INVALID",
+      "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+      "SELF_SIGNED_CERT_IN_CHAIN",
+      "CERT_NOT_YET_VALID",
+      "UNABLE_TO_GET_ISSUER_CERT",
+      "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+      "CERT_SIGNATURE_FAILURE",
+      "CERT_UNTRUSTED",
+      "CERT_REJECTED"
+    ].includes(code));
+  }
+  if (response.status === 204)
+    return null;
+  try {
+    body = await response.json();
+  } catch {
+    throw new RequestFailure(false);
+  }
+  if (response.ok)
+    return body;
+  const envelope = envelopeSchema.safeParse(body);
+  if (!envelope.success)
+    throw new SignInError("The service returned an invalid error response.");
+  const error = envelope.data.error;
+  const detail = limitSchema.safeParse(error.detail);
+  throw new ApiRefusal(error.code, response.status, error.code === "entitlement_required" && detail.success ? detail.data : undefined, response.headers.get("retry-after"));
+}
+var jsonRequest = (body) => ({
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify(body)
+});
+
+// packages/omo-opencode/src/cli/service-auth/device-name.ts
+function deviceName(host = hostname()) {
+  const clean = `omo CLI on ${host}`.replace(/[\p{Cc}\p{Zl}\p{Zp}\p{Cf}\u3164\u115F\u1160\uFFA0]/gu, "").trim();
+  return [...clean].slice(0, 64).join("").trim();
+}
+function devicePlatform() {
+  switch (process.platform) {
+    case "darwin":
+      return "macos";
+    case "linux":
+      return "linux";
+    case "win32":
+      return "windows";
+    default:
+      throw new SignInError("This platform is not supported for OmO sign-in.");
+  }
+}
+
+// packages/omo-opencode/src/cli/service-auth/device-flow.ts
+import { setTimeout as setTimeout2 } from "timers/promises";
+
+// packages/omo-opencode/src/cli/service-auth/device-keys.ts
+import { generateKeyPairSync } from "crypto";
+function generateDeviceKeys() {
+  const signing = generateKeyPairSync("ed25519");
+  const sealing = generateKeyPairSync("x25519");
+  const signingKey = signing.publicKey.export({ format: "jwk" }).x;
+  const sealingKey = sealing.publicKey.export({ format: "jwk" }).x;
+  if (!signingKey || !sealingKey)
+    throw new SignInError("Unable to generate device keys.");
+  return {
+    public: { signingKey, sealingKey },
+    private: {
+      signingPrivateKey: signing.privateKey.export({ format: "der", type: "pkcs8" }).toString("base64"),
+      sealingPrivateKey: sealing.privateKey.export({ format: "der", type: "pkcs8" }).toString("base64")
+    }
+  };
+}
+
+// packages/omo-opencode/src/cli/service-auth/device-flow.ts
+async function loginDevice(session, options) {
+  await session.ready();
+  const keys = generateDeviceKeys();
+  const minted = parseReply(deviceCodeSchema, await session.request("/v1/device/code", jsonRequest({ client: { name: options.name, platform: options.platform } })));
+  const uri = new URL(minted.verificationUri);
+  if (uri.protocol !== "https:" && !(uri.protocol === "http:" && uri.hostname === "127.0.0.1" && uri.port !== "")) {
+    throw new SignInError("The service returned an unsafe verification URL.");
+  }
+  options.show({ verificationUri: minted.verificationUri, userCode: minted.userCode, matchingCode: minted.matchingCode });
+  const now = options.now ?? Date.now;
+  const sleep = options.sleep ?? ((ms) => setTimeout2(ms, undefined, { signal: session.signal }));
+  const expiresAt = Date.parse(minted.expiresAt);
+  let interval = minted.intervalSeconds * 1000;
+  while (now() < expiresAt) {
+    await sleep(Math.min(interval, expiresAt - now()));
+    session.signal?.throwIfAborted();
+    if (now() >= expiresAt)
+      break;
+    try {
+      const grant = parseReply(grantSchema, await session.request("/v1/device/token", jsonRequest({
+        deviceCode: minted.deviceCode,
+        ...keys.public
+      })));
+      await session.save({ ...grant, ...keys.private });
+      return;
+    } catch (error) {
+      if (!(error instanceof ApiRefusal))
+        throw error;
+      if (error.status === 400 && error.code === "authorization_pending")
+        continue;
+      if (error.status === 400 && error.code === "slow_down") {
+        interval += 5000;
+        continue;
+      }
+      if (error.status === 429) {
+        interval = error.retryDelay(now(), Math.min(60000, interval + 5000));
+        continue;
+      }
+      if (error.detail !== undefined) {
+        if (await session.removeForLimit(error, options.chooseDevice))
+          continue;
+        throw new SignInError("Sign-in cancelled. No device was removed.");
+      }
+      if (["access_denied", "expired_token", "invalid_grant"].includes(error.code)) {
+        throw new SignInError("Device sign-in was denied or expired. Run omo login again for a new code.");
+      }
+      throw error;
+    }
+  }
+  throw new SignInError("Device sign-in expired. Run omo login again for a new code.");
+}
+
+// packages/omo-opencode/src/cli/service-auth/keystore.ts
+import { createHash as createHash9 } from "crypto";
+function credentialId(api) {
+  return createHash9("sha256").update(serviceOrigin(api)).digest("hex");
+}
+function createCredentialStore(api, secrets = typeof Bun === "undefined" ? null : Bun.secrets, platform = process.platform) {
+  if (!secrets)
+    throw new SignInError("OmO sign-in needs Bun 1.4 or newer with OS credential storage. No file fallback is available.");
+  const platformName = platform === "darwin" ? "macOS Keychain" : platform === "linux" ? "Linux Secret Service (libsecret and an unlocked keyring)" : platform === "win32" ? "Windows Credential Manager" : null;
+  if (platformName === null)
+    throw new SignInError("This platform has no supported OS credential store.");
+  const key = { service: "omo-cli", name: credentialId(api) };
+  const unavailable = () => new SignInError(`Cannot access ${platformName}. Unlock or enable the OS credential store and try again. Credentials are never saved to a file.`);
+  return {
+    async read() {
+      let value;
+      try {
+        value = await secrets.get(key);
+      } catch {
+        throw unavailable();
+      }
+      if (value === null)
+        return null;
+      try {
+        return credentialSchema.parse(JSON.parse(value));
+      } catch {
+        throw new SignInError("Stored sign-in data is invalid. Run omo logout, then omo login.");
+      }
+    },
+    async write(value) {
+      try {
+        await secrets.set({ ...key, value: JSON.stringify(credentialSchema.parse(value)) });
+      } catch {
+        throw unavailable();
+      }
+    },
+    async clear() {
+      try {
+        await secrets.delete(key);
+      } catch {
+        throw unavailable();
+      }
+    }
+  };
+}
+
+// packages/omo-opencode/src/cli/service-auth/loopback.ts
+import { createHash as createHash10, randomBytes as randomBytes3, timingSafeEqual } from "crypto";
+import { createServer as createServer3 } from "http";
+class BrowserUnavailable extends SignInError {
+}
+async function authorize(options) {
+  const verifier = randomBytes3(32).toString("base64url");
+  const state = randomBytes3(32).toString("base64url");
+  const answer = Promise.withResolvers();
+  const abort = () => answer.reject(new SignInError("Browser sign-in cancelled or timed out."));
+  let accepted = false;
+  let origin = "";
+  const server = createServer3((request, response) => {
+    response.setHeader("cache-control", "no-store");
+    response.setHeader("referrer-policy", "no-referrer");
+    response.setHeader("content-type", "text/plain; charset=utf-8");
+    const url = new URL(request.url ?? "/", origin);
+    if (request.method !== "GET" || request.headers.host !== new URL(origin).host || url.origin !== origin || url.pathname !== "/callback" || request.headers.forwarded || request.headers["x-forwarded-for"]) {
+      response.writeHead(404).end("Not found");
+      return;
+    }
+    const code = url.searchParams.get("code");
+    const suppliedState = Buffer.from(url.searchParams.get("state") ?? "");
+    const expectedState = Buffer.from(state);
+    if (accepted || url.searchParams.getAll("state").length !== 1 || suppliedState.length !== expectedState.length || !timingSafeEqual(suppliedState, expectedState) || url.searchParams.getAll("code").length !== 1 || !code) {
+      response.writeHead(400).end("Invalid sign-in response");
+      return;
+    }
+    accepted = true;
+    response.writeHead(200).end("Return to the terminal to finish signing in.");
+    answer.resolve(code);
+  });
+  try {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", () => {
+        server.off("error", reject);
+        resolve();
+      });
+    });
+    const address = server.address();
+    if (!address || typeof address === "string")
+      throw new SignInError("Unable to start the sign-in callback.");
+    origin = `http://127.0.0.1:${address.port}`;
+    const url = new URL(serviceOrigin(options.accounts));
+    url.search = new URLSearchParams({
+      redirect_uri: `${origin}/callback`,
+      code_challenge: createHash10("sha256").update(verifier).digest("base64url"),
+      code_challenge_method: "S256",
+      state
+    }).toString();
+    const timer = setTimeout(abort, 5 * 60000);
+    options.signal?.addEventListener("abort", abort, { once: true });
+    try {
+      options.signal?.throwIfAborted();
+      const openerFailed = () => {
+        if (!accepted)
+          throw new BrowserUnavailable("No browser is available; use device sign-in.");
+      };
+      const [code] = await Promise.all([
+        answer.promise,
+        options.open(url.href).then((opened) => {
+          if (!opened)
+            openerFailed();
+        }, openerFailed)
+      ]);
+      return { code, codeVerifier: verifier };
+    } finally {
+      clearTimeout(timer);
+      options.signal?.removeEventListener("abort", abort);
+    }
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(() => resolve()));
+  }
+}
+async function loginLoopback(session, options) {
+  await session.ready();
+  const keys = generateDeviceKeys();
+  for (;; ) {
+    const authorization = await authorize({ accounts: options.accounts, open: options.open, signal: session.signal });
+    try {
+      const grant = parseReply(grantSchema, await session.request("/v1/session/exchange", jsonRequest({
+        ...authorization,
+        kind: "cli",
+        deviceName: options.name,
+        platform: options.platform,
+        ...keys.public
+      })));
+      await session.save({ ...grant, ...keys.private });
+      return;
+    } catch (error) {
+      if (await session.removeForLimit(error, options.chooseDevice))
+        continue;
+      throw new SignInError("Sign-in cancelled. No device was removed.");
+    }
+  }
+}
+
+// packages/omo-opencode/src/cli/service-auth/session.ts
+import { mkdir as mkdir10 } from "fs/promises";
+import { homedir as homedir27 } from "os";
+import { join as join97 } from "path";
+
+// packages/team-core/src/team-state-store/lock-publish.ts
+import { access as access3, open as open2, unlink as unlink2 } from "fs/promises";
+import { dirname as dirname38 } from "path";
+
+// packages/team-core/src/team-state-store/lock-record.ts
+import { randomUUID as randomUUID4 } from "crypto";
+import { readFile as readFile33, stat as stat8 } from "fs/promises";
+var lockOwnerInstanceId = randomUUID4();
+var heldLockRecords = new Set;
+function buildLockRecord(ownerTag) {
+  return `${ownerTag} ${randomUUID4()}
+${process.pid}
+${Date.now()}
+${lockOwnerInstanceId}
+`;
+}
+function markLockRecordHeld(content) {
+  heldLockRecords.add(content);
+}
+function markLockRecordReleased(content) {
+  heldLockRecords.delete(content);
+}
+function errorCode(error) {
+  if (!(error instanceof Error) || !("code" in error))
+    return null;
+  return typeof error.code === "string" ? error.code : null;
+}
+function isPathAbsenceError(error) {
+  const code = errorCode(error);
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+function parseLockOwner(content) {
+  const lines = content.split(/\r?\n/).filter((line) => line.length > 0);
+  if (lines.length !== 3 && lines.length !== 4)
+    return null;
+  const ownerPid = Number.parseInt(lines[1] ?? "", 10);
+  const acquiredAtEpochMs = Number.parseInt(lines[2] ?? "", 10);
+  if (!Number.isInteger(ownerPid) || ownerPid <= 0)
+    return null;
+  if (!Number.isInteger(acquiredAtEpochMs) || acquiredAtEpochMs <= 0)
+    return null;
+  return {
+    ownerPid,
+    acquiredAtEpochMs,
+    instanceId: lines.length === 4 ? lines[3] ?? null : null
+  };
+}
+function isPidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (!(error instanceof Error)) {
+      throw error;
+    }
+    return false;
+  }
+}
+async function readLockRecord(lockPath) {
+  try {
+    const content = await readFile33(lockPath, "utf8");
+    const { mtimeMs } = await stat8(lockPath);
+    return { content, modifiedAtEpochMs: mtimeMs };
+  } catch (error) {
+    if (!(error instanceof Error))
+      throw error;
+    return null;
+  }
+}
+function isLockRecordStale(record, staleAfterMs) {
+  const owner = parseLockOwner(record.content);
+  if (owner === null)
+    return Date.now() - record.modifiedAtEpochMs > staleAfterMs;
+  if (owner.instanceId !== null && owner.ownerPid === process.pid) {
+    return owner.instanceId !== lockOwnerInstanceId || !heldLockRecords.has(record.content);
+  }
+  if (isPidAlive(owner.ownerPid))
+    return false;
+  if (owner.instanceId !== null)
+    return true;
+  return Date.now() - owner.acquiredAtEpochMs > staleAfterMs;
+}
+
+// packages/team-core/src/team-state-store/lock-publish.ts
+async function pathMayExist(path, deps = {}) {
+  const accessPath = deps.access ?? access3;
+  try {
+    await accessPath(path);
+    return true;
+  } catch (error) {
+    if (!(error instanceof Error))
+      throw error;
+    return !isPathAbsenceError(error);
+  }
+}
+async function assertRetryableLockOpenError(lockPath, error, deps) {
+  const code = errorCode(error);
+  if (code === "EEXIST")
+    return;
+  if (code === "EPERM") {
+    if (await pathMayExist(lockPath, deps))
+      return;
+    if ((deps?.platform ?? process.platform) === "win32" && await pathMayExist(dirname38(lockPath), deps))
+      return;
+  }
+  throw error;
+}
+async function publishLockRecord(lockPath, record) {
+  markLockRecordHeld(record);
+  let fileHandle;
+  try {
+    fileHandle = await open2(lockPath, "wx");
+  } catch (error) {
+    markLockRecordReleased(record);
+    await assertRetryableLockOpenError(lockPath, error);
+    return false;
+  }
+  try {
+    await fileHandle.writeFile(record);
+  } catch (error) {
+    markLockRecordReleased(record);
+    await fileHandle.close();
+    await unlink2(lockPath).catch(() => {
+      return;
+    });
+    throw error;
+  }
+  await fileHandle.close();
+  return true;
+}
+
+// packages/team-core/src/team-state-store/lock-reclaim.ts
+import { createHash as createHash11 } from "crypto";
+import { unlink as unlink3 } from "fs/promises";
+var RECLAIM_UNLINK_ATTEMPTS = 3;
+var RECLAIM_UNLINK_RETRY_MS = 25;
+function delay2(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+function reclaimGuardPath(lockPath, record) {
+  return `${lockPath}.reclaim-${createHash11("sha256").update(record).digest("hex").slice(0, 16)}`;
+}
+async function unlinkWithRetry(path, deps) {
+  const wait = deps.delay ?? delay2;
+  const unlinkFile = deps.unlink ?? unlink3;
+  for (let attempt = 1;; attempt += 1) {
+    try {
+      await unlinkFile(path);
+      return "removed";
+    } catch (error) {
+      if (!(error instanceof Error))
+        throw error;
+      if (isPathAbsenceError(error))
+        return "absent";
+      const code = errorCode(error);
+      if (code !== "EPERM" && code !== "EBUSY" || attempt === RECLAIM_UNLINK_ATTEMPTS)
+        return "stuck";
+      await wait(RECLAIM_UNLINK_RETRY_MS);
+    }
+  }
+}
+async function removeLockRecordIfUnchanged(lockPath, expectedRecord, staleAfterMs, deps = {}) {
+  const guardPath = reclaimGuardPath(lockPath, expectedRecord);
+  const guardRecord = buildLockRecord("lock-reclaim");
+  if (!await publishLockRecord(guardPath, guardRecord)) {
+    const guard = await readLockRecord(guardPath);
+    if (guard !== null && isLockRecordStale(guard, staleAfterMs)) {
+      await removeLockRecordIfUnchanged(guardPath, guard.content, staleAfterMs, deps);
+    }
+    return "busy";
+  }
+  try {
+    const current = await readLockRecord(lockPath);
+    if (current === null)
+      return "absent";
+    if (current.content !== expectedRecord || !isLockRecordStale(current, staleAfterMs))
+      return "changed";
+    const unlinked = await unlinkWithRetry(lockPath, deps);
+    return unlinked === "absent" ? "absent" : unlinked;
+  } finally {
+    markLockRecordReleased(guardRecord);
+    await unlinkWithRetry(guardPath, deps);
+  }
+}
+
+// packages/team-core/src/team-state-store/locks.ts
+var LOCK_RETRY_MS = 50;
+var LOCK_WAIT_TIMEOUT_MS = 15000;
+var DEFAULT_STALE_AFTER_MS = 300000;
+function delay3(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+async function acquireLock(lockPath, ownerTag, staleAfterMs) {
+  const startedAt = Date.now();
+  for (;; ) {
+    if (Date.now() - startedAt > LOCK_WAIT_TIMEOUT_MS) {
+      throw new Error(`Timed out acquiring lock: ${lockPath}`);
+    }
+    const record = buildLockRecord(ownerTag);
+    if (await publishLockRecord(lockPath, record))
+      return record;
+    const outcome = await reapStaleLock(lockPath, staleAfterMs);
+    if (outcome === "removed" || outcome === "absent")
+      continue;
+    await delay3(LOCK_RETRY_MS);
+  }
+}
+async function withLock(lockPath, fn, opts) {
+  const staleAfterMs = opts?.staleAfterMs ?? DEFAULT_STALE_AFTER_MS;
+  const ownerTag = opts?.ownerTag ?? "owner";
+  const record = await acquireLock(lockPath, ownerTag, staleAfterMs);
+  try {
+    return await fn();
+  } finally {
+    markLockRecordReleased(record);
+    await removeLockRecordIfUnchanged(lockPath, record, staleAfterMs);
+  }
+}
+async function reapStaleLock(lockPath, staleAfterMs = DEFAULT_STALE_AFTER_MS, deps = {}) {
+  const observed = await readLockRecord(lockPath);
+  if (observed === null)
+    return "absent";
+  if (!isLockRecordStale(observed, staleAfterMs))
+    return "changed";
+  return await removeLockRecordIfUnchanged(lockPath, observed.content, staleAfterMs, deps);
+}
+
+// packages/omo-opencode/src/cli/service-auth/session.ts
+class SessionEnded extends SignInError {
+  deviceRevoked;
+  constructor(message, deviceRevoked) {
+    super(message);
+    this.deviceRevoked = deviceRevoked;
+  }
+}
+var DEVICE_REVOKING_REFUSALS = new Set(["account_deleted", "reauth_required"]);
+function createSession(options) {
+  const api = serviceOrigin(options.api);
+  const { store, signal } = options;
+  const directory = join97(options.home ?? homedir27(), ".omo", "session-locks");
+  const lockPath = join97(directory, `${credentialId(api)}.lock`);
+  async function locked(action) {
+    await mkdir10(directory, { recursive: true, mode: 448 });
+    signal?.throwIfAborted();
+    return withLock(lockPath, async () => {
+      signal?.throwIfAborted();
+      return action();
+    }, { ownerTag: "cli-session", staleAfterMs: Number.POSITIVE_INFINITY });
+  }
+  const request = (path, init) => requestApi(api, path, init, signal);
+  const uncertain = () => new SignInError("The refresh outcome is unknown. Saved credentials and keys were retained, but this refresh token will not be sent again. Retry sign-in with omo login.", true);
+  async function refreshedAccess(current) {
+    if (current.refreshState === "uncertain")
+      throw uncertain();
+    if (Date.parse(current.accessTokenExpiresAt) > Date.now() + 30000)
+      return current.accessToken;
+    await store.write({ ...current, refreshState: "uncertain" });
+    try {
+      const tokens = parseReply(tokenSchema, await request("/v1/session/refresh", jsonRequest({ refreshToken: current.refreshToken })));
+      await store.write({ ...current, ...tokens });
+      return tokens.accessToken;
+    } catch (error) {
+      if (error instanceof ApiRefusal && error.status < 500 && ["unauthorized", "account_deleted", "reauth_required", "invalid_grant"].includes(error.code)) {
+        await store.clear();
+        throw new SessionEnded(error.code === "reauth_required" ? "This session was ended because its refresh token was reused. Sign in again with omo login." : "Sign in again with omo login.", DEVICE_REVOKING_REFUSALS.has(error.code));
+      }
+      if (error instanceof RequestFailure && error.notSent || error instanceof ApiRefusal && error.status === 429 && error.code === "rate_limited") {
+        await store.write(current);
+        throw error;
+      }
+      throw uncertain();
+    }
+  }
+  return {
+    request,
+    signal,
+    async ready() {
+      await store.read();
+    },
+    async save(value) {
+      await locked(() => store.write(value));
+    },
+    async logout() {
+      return locked(async () => {
+        try {
+          const current = await store.read();
+          if (current !== null) {
+            if (current.refreshState === "uncertain")
+              return false;
+            const access = Date.parse(current.accessTokenExpiresAt) <= Date.now() ? await refreshedAccess(current) : current.accessToken;
+            await request(`/v1/devices/${encodeURIComponent(current.device.id)}`, {
+              method: "DELETE",
+              headers: { authorization: `Bearer ${access}` }
+            });
+          }
+          return true;
+        } catch (error) {
+          if (error instanceof SessionEnded)
+            return error.deviceRevoked;
+          if (error instanceof SignInError)
+            return false;
+          throw error;
+        } finally {
+          await store.clear();
+        }
+      });
+    },
+    async accessToken() {
+      return locked(async () => {
+        const current = await store.read();
+        if (current === null)
+          throw new SignInError("Not signed in. Run omo login.");
+        return refreshedAccess(current);
+      });
+    },
+    async removeForLimit(error, choose) {
+      if (!(error instanceof ApiRefusal) || error.detail === undefined)
+        throw error;
+      const headers = { authorization: `Bearer ${error.detail.managementToken}` };
+      const listed = parseReply(deviceListSchema, await request("/v1/devices", { headers }));
+      const devices = listed.devices.filter((device) => device.revokedAt === null);
+      const chosen = await choose(devices);
+      if (chosen === null)
+        return false;
+      if (!devices.some((device) => device.id === chosen))
+        throw new SignInError("No matching device was selected.");
+      await request(`/v1/devices/${encodeURIComponent(chosen)}`, { method: "DELETE", headers });
+      return true;
+    }
+  };
+}
+
+// packages/omo-opencode/src/cli/service-auth/commands.ts
+async function ensureServiceAvailable(session, api) {
+  try {
+    await session.request("/v1/health", { method: "GET" });
+  } catch (error) {
+    if (!(error instanceof SignInError))
+      throw error;
+    if (error instanceof RequestFailure) {
+      throw new SignInError(`Can't reach OmO accounts at ${api}. The service may not be available yet, or your network, proxy or certificate settings are blocking it.`);
+    }
+    throw new SignInError(`OmO accounts at ${api} aren't available right now. Try again later.`);
+  }
+}
+function deviceChoices(devices) {
+  return devices.map((device) => ({ value: device.id, label: terminalText(device.name) }));
+}
+var chooseDevice = async (devices) => {
+  if (!process.stdin.isTTY || devices.length === 0) {
+    console.error("Device limit reached. Run omo login in an interactive terminal to choose a device to remove.");
+    return null;
+  }
+  const chosen = await select({
+    message: "Device limit reached. Remove a device to sign in?",
+    options: [{ value: "", label: "Cancel (keep all devices)" }, ...deviceChoices(devices)]
+  });
+  if (isCancel(chosen) || chosen === "")
+    return null;
+  const agreed = await confirm({ message: "Sign out the selected device?", initialValue: false });
+  return agreed === true ? chosen : null;
+};
+async function run2(action, options) {
+  const controller = new AbortController;
+  const cancel = () => controller.abort();
+  process.once("SIGINT", cancel);
+  process.once("SIGTERM", cancel);
+  try {
+    const api = serviceOrigin(options.api ?? process.env.OMO_SERVICE_API_URL ?? "https://api.omo.dev");
+    const store = createCredentialStore(api);
+    const session = createSession({ api, store, signal: controller.signal });
+    if (action === "logout") {
+      const revoked = await session.logout();
+      console.log("Signed out of OmO. Stored credentials and device keys were removed.");
+      if (!revoked)
+        console.error("Server device revocation could not be confirmed. Remove this device from the Devices page of your OmO account when connected.");
+      return;
+    }
+    if (action === "whoami") {
+      await session.accessToken();
+      const saved = await store.read();
+      console.log(saved ? `Signed in to ${api} as ${terminalText(saved.device.name)}.` : "Not signed in.");
+      return;
+    }
+    await ensureServiceAvailable(session, api);
+    const name = deviceName();
+    const platform = devicePlatform();
+    if (!options.device && options.browser !== false) {
+      try {
+        await loginLoopback(session, {
+          accounts: serviceOrigin(options.accounts ?? process.env.OMO_SERVICE_ACCOUNTS_URL ?? "https://accounts.omo.dev"),
+          name,
+          platform,
+          open: openSignInBrowser,
+          chooseDevice
+        });
+        console.log("Signed in to OmO.");
+        return;
+      } catch (error) {
+        if (!(error instanceof BrowserUnavailable))
+          throw error;
+      }
+    }
+    await loginDevice(session, {
+      name,
+      platform,
+      chooseDevice,
+      show: (code) => {
+        console.log(`Open ${code.verificationUri}`);
+        console.log(`User code: ${code.userCode}`);
+        console.log(`Matching code: ${code.matchingCode}`);
+      }
+    });
+    console.log("Signed in to OmO.");
+  } catch (error) {
+    console.error(controller.signal.aborted ? "Sign-in cancelled." : error instanceof SignInError ? error.message : "Unable to complete OmO sign-in. Check the OS credential store and try again.");
+    process.exitCode = 1;
+  } finally {
+    process.removeListener("SIGINT", cancel);
+    process.removeListener("SIGTERM", cancel);
+  }
+}
+function configureServiceAuthCommands(program) {
+  program.command("login").description("Sign in to OmO using the OS credential store").option("--device", "Use a device code instead of a browser callback").option("--no-browser", "Sign in by device code without opening a browser").option("--api <url>", "OmO API origin (or OMO_SERVICE_API_URL)").option("--accounts <url>", "OmO accounts origin (or OMO_SERVICE_ACCOUNTS_URL)").action((options) => run2("login", options));
+  for (const action of ["logout", "whoami"]) {
+    program.command(action).description(action === "logout" ? "Remove stored OmO credentials and device keys" : "Show the current OmO device sign-in").option("--api <url>", "OmO API origin (or OMO_SERVICE_API_URL)").action((options) => run2(action, options));
+  }
+}
+
+// packages/omo-opencode/src/cli/install-command-options.ts
+function resolveInstallArgs(options, invocationName = process.env.OMO_INVOCATION_NAME) {
+  const defaultPlatform = process.env.OMO_EDITION === "codex" || invocationName === "lazycodex" || invocationName === "lazycodex-ai" ? "codex" : undefined;
+  const platform = options.platform ?? defaultPlatform;
+  if (platform === "native-dev" && !isNativeDevPlatformEnabled()) {
+    throw new Error(`The native-dev install platform is not available in this release. Set ${NATIVE_DEV_PLATFORM_ENV_FLAG}=1 to enable it from a source checkout.`);
+  }
+  return {
+    tui: options.tui !== false,
+    claude: options.claude,
+    openai: options.openai,
+    gemini: options.gemini,
+    copilot: options.copilot,
+    platform,
+    opencodeZen: options.opencodeZen,
+    zaiCodingPlan: options.zaiCodingPlan,
+    kimiForCoding: options.kimiForCoding,
+    opencodeGo: options.opencodeGo,
+    bailianCodingPlan: options.bailianCodingPlan,
+    minimaxCnCodingPlan: options.minimaxCnCodingPlan,
+    minimaxCodingPlan: options.minimaxCodingPlan,
+    vercelAiGateway: options.vercelAiGateway,
+    codexAutonomous: options.codexAutonomous,
+    skipAuth: options.skipAuth ?? false
+  };
+}
+
 // packages/omo-opencode/src/cli/boulder/boulder.ts
 import { existsSync as existsSync64 } from "fs";
 
@@ -110464,11 +111381,11 @@ async function boulder(options) {
 // packages/omo-opencode/src/cli/codex-ulw-loop.ts
 import { spawn as spawn5 } from "child_process";
 import { existsSync as existsSync65, readFileSync as readFileSync43, realpathSync as realpathSync11 } from "fs";
-import { homedir as homedir27 } from "os";
+import { homedir as homedir28 } from "os";
 var ULW_LOOP_DELEGATION_SENTINEL = "OMO_ULW_LOOP_DELEGATED";
 function resolveCodexUlwLoopCommand(input = {}) {
   const env = input.env ?? process.env;
-  const homeDir = input.homeDir ?? homedir27();
+  const homeDir = input.homeDir ?? homedir28();
   const localComponentBin = resolveLocalUlwLoopBin(env, homeDir);
   if (localComponentBin !== null)
     return { executable: localComponentBin, argsPrefix: [] };
@@ -110709,7 +111626,7 @@ function linkedWorktrees(records) {
 }
 // packages/omo-opencode/src/cli/worktree-sweep/sweep.ts
 import { existsSync as existsSync66 } from "fs";
-import { stat as stat8 } from "fs/promises";
+import { stat as stat9 } from "fs/promises";
 import os7 from "os";
 import { normalize as normalize2 } from "path";
 
@@ -110792,7 +111709,7 @@ async function isOlderThan(worktreePath, days, now) {
   if (days <= 0)
     return false;
   try {
-    const stats = await stat8(worktreePath);
+    const stats = await stat9(worktreePath);
     return now - stats.mtimeMs > days * DAY_MS;
   } catch {
     return false;
@@ -111009,31 +111926,6 @@ function runConfigMigrate(options = {}) {
 init_package();
 var VERSION3 = package_default.version;
 var program2 = new Command;
-function resolveInstallArgs(options, invocationName = process.env.OMO_INVOCATION_NAME) {
-  const defaultPlatform = process.env.OMO_EDITION === "codex" || invocationName === "lazycodex" || invocationName === "lazycodex-ai" ? "codex" : undefined;
-  const platform = options.platform ?? defaultPlatform;
-  if (platform === "native-dev" && !isNativeDevPlatformEnabled()) {
-    throw new Error(`The native-dev install platform is not available in this release. Set ${NATIVE_DEV_PLATFORM_ENV_FLAG}=1 to enable it from a source checkout.`);
-  }
-  return {
-    tui: options.tui !== false,
-    claude: options.claude,
-    openai: options.openai,
-    gemini: options.gemini,
-    copilot: options.copilot,
-    platform,
-    opencodeZen: options.opencodeZen,
-    zaiCodingPlan: options.zaiCodingPlan,
-    kimiForCoding: options.kimiForCoding,
-    opencodeGo: options.opencodeGo,
-    bailianCodingPlan: options.bailianCodingPlan,
-    minimaxCnCodingPlan: options.minimaxCnCodingPlan,
-    minimaxCodingPlan: options.minimaxCodingPlan,
-    vercelAiGateway: options.vercelAiGateway,
-    codexAutonomous: options.codexAutonomous,
-    skipAuth: options.skipAuth ?? false
-  };
-}
 program2.name("oh-my-opencode").description("The ultimate OpenCode plugin - multi-model orchestration, LSP tools, and more").version(VERSION3, "-v, --version", "Show version number").helpOption("-h, --help", "Display help for command").addOption(new Option("--platform <platform>", `Install target platform: ${availableInstallPlatforms().join(", ")}`).choices(availableInstallPlatforms()).hideHelp()).enablePositionalOptions();
 program2.command("install").alias("setup").description("Install and configure oh-my-opencode with interactive setup").option("--no-tui", "Run in non-interactive mode (requires all options)").option("--claude <value>", "Claude subscription: no, yes, max20").option("--openai <value>", "OpenAI/ChatGPT subscription: no, yes (default: no)").option("--gemini <value>", "Gemini integration: no, yes").option("--copilot <value>", "GitHub Copilot subscription: no, yes").addOption(new Option("--platform <platform>", `Install target platform: ${availableInstallPlatforms().join(", ")}`).choices(availableInstallPlatforms())).option("--opencode-zen <value>", "OpenCode Zen access: no, yes (default: no)").option("--zai-coding-plan <value>", "Z.ai Coding Plan subscription: no, yes (default: no)").option("--kimi-for-coding <value>", "Kimi For Coding subscription: no, yes (default: no)").option("--opencode-go <value>", "OpenCode Go subscription: no, yes (default: no)").option("--bailian-coding-plan <value>", "Bailian Coding Plan subscription: no, yes (default: no)").option("--minimax-cn-coding-plan <value>", "MiniMax Coding Plan (minimaxi.com) subscription: no, yes (default: no)").option("--minimax-coding-plan <value>", "MiniMax Coding Plan (minimax.io) subscription: no, yes (default: no)").option("--vercel-ai-gateway <value>", "Vercel AI Gateway: no, yes (default: no)").option("--codex-autonomous", "Configure Codex with approval never, full filesystem access, and network enabled").option("--no-codex-autonomous", "Leave existing Codex permission settings unchanged").option("--skip-auth", "Skip authentication setup hints").addHelpText("after", `
 Examples:
@@ -111151,6 +112043,7 @@ program2.command("config").description("Manage unified OMO configuration").comma
 });
 configureRuntimeCommands(program2);
 program2.addCommand(createMcpOAuthCommand());
+configureServiceAuthCommands(program2);
 function runCli() {
   program2.parse();
 }

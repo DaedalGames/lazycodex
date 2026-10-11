@@ -3815,7 +3815,7 @@ class LspClient extends LspClientConnection {
         } catch (error) {
           if (this.isUnsupportedDiagnosticPullError(error)) {
             this.setDiagnosticPullSupported(false);
-            pushFallbackOnly = true;
+            continue;
           } else if (error instanceof LspRequestTimeoutError) {
             pushFallbackOnly = true;
           } else {
