@@ -64,7 +64,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "5.1.30",
+    version: "5.1.32",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -241,7 +241,7 @@ var init_package = __esm(() => {
     },
     devDependencies: {
       "@clack/prompts": "^1.8.1",
-      "@code-yeongyu/senpi": "2026.10.11",
+      "@code-yeongyu/senpi": "2026.10.12",
       "@modelcontextprotocol/sdk": "^1.30.0",
       "@oh-my-opencode/agents-md-core": "workspace:*",
       "@oh-my-opencode/ast-grep-mcp": "workspace:*",
@@ -300,18 +300,18 @@ var init_package = __esm(() => {
       typescript: "^7.0.2"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "5.1.30",
-      "oh-my-opencode-darwin-x64": "5.1.30",
-      "oh-my-opencode-darwin-x64-baseline": "5.1.30",
-      "oh-my-opencode-linux-arm64": "5.1.30",
-      "oh-my-opencode-linux-arm64-musl": "5.1.30",
-      "oh-my-opencode-linux-x64": "5.1.30",
-      "oh-my-opencode-linux-x64-baseline": "5.1.30",
-      "oh-my-opencode-linux-x64-musl": "5.1.30",
-      "oh-my-opencode-linux-x64-musl-baseline": "5.1.30",
-      "oh-my-opencode-windows-arm64": "5.1.30",
-      "oh-my-opencode-windows-x64": "5.1.30",
-      "oh-my-opencode-windows-x64-baseline": "5.1.30"
+      "oh-my-opencode-darwin-arm64": "5.1.32",
+      "oh-my-opencode-darwin-x64": "5.1.32",
+      "oh-my-opencode-darwin-x64-baseline": "5.1.32",
+      "oh-my-opencode-linux-arm64": "5.1.32",
+      "oh-my-opencode-linux-arm64-musl": "5.1.32",
+      "oh-my-opencode-linux-x64": "5.1.32",
+      "oh-my-opencode-linux-x64-baseline": "5.1.32",
+      "oh-my-opencode-linux-x64-musl": "5.1.32",
+      "oh-my-opencode-linux-x64-musl-baseline": "5.1.32",
+      "oh-my-opencode-windows-arm64": "5.1.32",
+      "oh-my-opencode-windows-x64": "5.1.32",
+      "oh-my-opencode-windows-x64-baseline": "5.1.32"
     },
     overrides: {
       hono: "^4.13.8",
@@ -74749,7 +74749,8 @@ var init_memory = __esm(() => {
   }).strict();
   OmoMemoryFactsSchema = object({
     enabled: boolean2().default(true),
-    debounce_settles: number2().int().min(1).default(4)
+    debounce_settles: number2().int().min(1).default(4),
+    model: string2().min(1).optional()
   }).strict();
   OmoMemoryDreamSchema = object({
     enabled: boolean2().default(true),
@@ -74811,7 +74812,8 @@ var init_memory = __esm(() => {
   }).strict();
   OmoMemoryFactsLayerSchema = object({
     enabled: boolean2().optional(),
-    debounce_settles: number2().int().min(1).optional()
+    debounce_settles: number2().int().min(1).optional(),
+    model: string2().min(1).optional()
   }).strict();
   OmoMemoryDreamLayerSchema = object({
     enabled: boolean2().optional(),
@@ -89900,7 +89902,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "5.1.30",
+    version: "5.1.32",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -111127,6 +111129,10 @@ var chooseDevice = async (devices) => {
   const agreed = await confirm({ message: "Sign out the selected device?", initialValue: false });
   return agreed === true ? chosen : null;
 };
+var DEFAULT_ACCOUNTS_ORIGIN = "https://signin.omo.dev";
+function accountsOrigin(options, env) {
+  return serviceOrigin(options.accounts ?? env.OMO_SERVICE_ACCOUNTS_URL ?? DEFAULT_ACCOUNTS_ORIGIN);
+}
 async function run2(action, options) {
   const controller = new AbortController;
   const cancel = () => controller.abort();
@@ -111155,7 +111161,7 @@ async function run2(action, options) {
     if (!options.device && options.browser !== false) {
       try {
         await loginLoopback(session, {
-          accounts: serviceOrigin(options.accounts ?? process.env.OMO_SERVICE_ACCOUNTS_URL ?? "https://accounts.omo.dev"),
+          accounts: accountsOrigin(options, process.env),
           name,
           platform,
           open: openSignInBrowser,
@@ -111188,7 +111194,7 @@ async function run2(action, options) {
   }
 }
 function configureServiceAuthCommands(program) {
-  program.command("login").description("Sign in to OmO using the OS credential store").option("--device", "Use a device code instead of a browser callback").option("--no-browser", "Sign in by device code without opening a browser").option("--api <url>", "OmO API origin (or OMO_SERVICE_API_URL)").option("--accounts <url>", "OmO accounts origin (or OMO_SERVICE_ACCOUNTS_URL)").action((options) => run2("login", options));
+  program.command("login").description("Sign in to OmO using the OS credential store").option("--device", "Use a device code instead of a browser callback").option("--no-browser", "Sign in by device code without opening a browser").option("--api <url>", "OmO API origin (or OMO_SERVICE_API_URL)").option("--accounts <url>", "OmO sign-in page origin (or OMO_SERVICE_ACCOUNTS_URL)").action((options) => run2("login", options));
   for (const action of ["logout", "whoami"]) {
     program.command(action).description(action === "logout" ? "Remove stored OmO credentials and device keys" : "Show the current OmO device sign-in").option("--api <url>", "OmO API origin (or OMO_SERVICE_API_URL)").action((options) => run2(action, options));
   }
