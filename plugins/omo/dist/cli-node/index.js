@@ -2133,7 +2133,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "5.1.34",
+    version: "5.1.35",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2369,18 +2369,18 @@ var init_package = __esm(() => {
       typescript: "^7.0.2"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "5.1.34",
-      "oh-my-opencode-darwin-x64": "5.1.34",
-      "oh-my-opencode-darwin-x64-baseline": "5.1.34",
-      "oh-my-opencode-linux-arm64": "5.1.34",
-      "oh-my-opencode-linux-arm64-musl": "5.1.34",
-      "oh-my-opencode-linux-x64": "5.1.34",
-      "oh-my-opencode-linux-x64-baseline": "5.1.34",
-      "oh-my-opencode-linux-x64-musl": "5.1.34",
-      "oh-my-opencode-linux-x64-musl-baseline": "5.1.34",
-      "oh-my-opencode-windows-arm64": "5.1.34",
-      "oh-my-opencode-windows-x64": "5.1.34",
-      "oh-my-opencode-windows-x64-baseline": "5.1.34"
+      "oh-my-opencode-darwin-arm64": "5.1.35",
+      "oh-my-opencode-darwin-x64": "5.1.35",
+      "oh-my-opencode-darwin-x64-baseline": "5.1.35",
+      "oh-my-opencode-linux-arm64": "5.1.35",
+      "oh-my-opencode-linux-arm64-musl": "5.1.35",
+      "oh-my-opencode-linux-x64": "5.1.35",
+      "oh-my-opencode-linux-x64-baseline": "5.1.35",
+      "oh-my-opencode-linux-x64-musl": "5.1.35",
+      "oh-my-opencode-linux-x64-musl-baseline": "5.1.35",
+      "oh-my-opencode-windows-arm64": "5.1.35",
+      "oh-my-opencode-windows-x64": "5.1.35",
+      "oh-my-opencode-windows-x64-baseline": "5.1.35"
     },
     overrides: {
       hono: "^4.13.8",
@@ -82386,6 +82386,9 @@ var init_activity_state = __esm(() => {
   capturedDaysByStateDir = new Map;
 });
 
+// packages/telemetry-core/src/consent-gated-fetch.ts
+var init_consent_gated_fetch = () => {};
+
 // packages/telemetry-core/src/constants.ts
 var DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com", DEFAULT_POSTHOG_API_KEY = "phc_CFJhj5HyvA62QPhvyaUCtaq23aUfznnijg5VaaGkNk74", UNCONFIGURED_POSTHOG_API_KEY = "phc_REPLACE_ME_OMO_NATIVE";
 
@@ -82433,6 +82436,7 @@ function toDiagnosticRecord(input, now) {
     timestamp: now.toISOString(),
     event: input.event,
     source: input.source,
+    ...input.count === undefined ? {} : { count: input.count },
     ...serializeError(input.error, input.errorKind)
   };
 }
@@ -82525,7 +82529,7 @@ function shouldDisableTelemetry(input) {
   const env = input.env ?? process.env;
   const globalPrefix = input.globalEnvPrefix ?? "OMO";
   const prefixes = Array.from(new Set([globalPrefix, input.productEnvPrefix]));
-  if (isDisableFlag(env["DO_NOT_TRACK"])) {
+  if (isDisableFlag(env["DO_NOT_TRACK"]) || isDisableFlag(env[`${globalPrefix}_DISABLE_TELEMETRY`])) {
     return true;
   }
   for (const prefix of prefixes) {
@@ -82555,6 +82559,47 @@ var TRUTHY_DISABLE_VALUES, SEND_OPT_OUT_VALUES;
 var init_env = __esm(() => {
   TRUTHY_DISABLE_VALUES = ["1", "true", "yes"];
   SEND_OPT_OUT_VALUES = ["0", "false", "no", "yes"];
+});
+
+// packages/telemetry-core/src/event-id.ts
+import { randomBytes as nodeRandomBytes } from "node:crypto";
+function createUuidV7Generator(source = {}) {
+  const now = source.now ?? Date.now;
+  const randomBytes = source.randomBytes ?? ((size) => new Uint8Array(nodeRandomBytes(size)));
+  let lastMs = -1;
+  let counter = 0;
+  return () => {
+    const random = randomBytes(10);
+    const wallMs = Math.floor(now());
+    if (wallMs > lastMs) {
+      lastMs = wallMs;
+      counter = (random[0] << 8 | random[1]) & COUNTER_SEED_MASK;
+    } else if (counter < MAX_COUNTER) {
+      counter += 1;
+    } else {
+      lastMs += 1;
+      counter = (random[0] << 8 | random[1]) & COUNTER_SEED_MASK;
+    }
+    const bytes = new Uint8Array(16);
+    let timestamp = lastMs;
+    for (let index = 5;index >= 0; index -= 1) {
+      bytes[index] = timestamp % 256;
+      timestamp = Math.floor(timestamp / 256);
+    }
+    bytes[6] = 112 | counter >> 8;
+    bytes[7] = counter & 255;
+    bytes[8] = 128 | random[2] & 63;
+    bytes.set(random.subarray(3, 10), 9);
+    return formatUuid(bytes);
+  };
+}
+function formatUuid(bytes) {
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+var MAX_COUNTER = 4095, COUNTER_SEED_MASK = 2047, fallbackEventId;
+var init_event_id = __esm(() => {
+  fallbackEventId = createUuidV7Generator();
 });
 
 // node_modules/.bun/posthog-node@5.52.4/node_modules/posthog-node/dist/extensions/error-tracking/modifiers/module.node.mjs
@@ -92123,8 +92168,10 @@ var init_record_daily_active = () => {};
 // packages/telemetry-core/src/index.ts
 var init_src5 = __esm(() => {
   init_activity_state();
+  init_consent_gated_fetch();
   init_diagnostics();
   init_env();
+  init_event_id();
   init_events();
   init_machine_id();
   init_posthog_client();
@@ -92136,7 +92183,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "5.1.34",
+    version: "5.1.35",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -99434,6 +99481,7 @@ var REQUIRED_PLUGIN_ARTIFACTS = [
   join63("extensions", "omo-computer-use.js"),
   join63("extensions", "omo-memory-doctor.js"),
   join63("extensions", "omo-memory-memfs.js"),
+  join63("extensions", "omo-memory-palace.js"),
   join63("extensions", "omo-thread-client.js"),
   join63("extensions", "assets.generated.json"),
   join63("extensions", "omo-member.js"),
@@ -110573,7 +110621,11 @@ function compareUtf16(left, right) {
   const b = Buffer2.from(right, "utf16le").swap16();
   return Buffer2.compare(a, b);
 }
-function serializeValue(value, out) {
+var MAX_SERIALIZE_DEPTH = 64;
+function serializeValue(value, out, depth = 0) {
+  if (typeof value === "object" && value !== null && depth >= MAX_SERIALIZE_DEPTH) {
+    throw new CanonicalJsonError("json", `nesting deeper than ${MAX_SERIALIZE_DEPTH}`);
+  }
   if (value === null)
     out.push("null");
   else if (typeof value === "boolean")
@@ -110587,7 +110639,7 @@ function serializeValue(value, out) {
     value.forEach((element, index) => {
       if (index > 0)
         out.push(",");
-      serializeValue(element, out);
+      serializeValue(element, out, depth + 1);
     });
     out.push("]");
   } else {
@@ -110596,7 +110648,7 @@ function serializeValue(value, out) {
       if (index > 0)
         out.push(",");
       out.push(escapeCanonicalString(key), ":");
-      serializeValue(value[key], out);
+      serializeValue(value[key], out, depth + 1);
     });
     out.push("}");
   }
@@ -110608,9 +110660,12 @@ function canonicalizeJson(value) {
 }
 
 // packages/memory-core/src/sync/canonical-json.ts
+var MAX_CANONICAL_DEPTH = 64;
+
 class Parser {
   text;
   position = 0;
+  depth = 0;
   constructor(text) {
     this.text = text;
   }
@@ -110624,10 +110679,14 @@ class Parser {
   parseValue() {
     this.skipInsignificant();
     const char = this.text[this.position];
-    if (char === "{")
-      return this.parseObject();
-    if (char === "[")
-      return this.parseArray();
+    if (char === "{" || char === "[") {
+      if (this.depth >= MAX_CANONICAL_DEPTH)
+        throw this.fail("json", `nesting deeper than ${MAX_CANONICAL_DEPTH}`);
+      this.depth++;
+      const value = char === "{" ? this.parseObject() : this.parseArray();
+      this.depth--;
+      return value;
+    }
     if (char === '"')
       return this.parseString().value;
     if (char === "-" || char >= "0" && char <= "9")
@@ -110823,7 +110882,14 @@ function openHpkeSealedBox(sealingPrivateRaw, sealingPublicRaw, wrap, info = Buf
     },
     format: "jwk"
   });
-  const dh = diffieHellman({ privateKey, publicKey: x25519PublicKeyFromRaw(enc) });
+  let dh;
+  try {
+    dh = diffieHellman({ privateKey, publicKey: x25519PublicKeyFromRaw(enc) });
+  } catch {
+    throw new Error("sealed box does not open: wrong recipient or corrupted wrap");
+  }
+  if (dh.every((byte) => byte === 0))
+    throw new Error("sealed box does not open: wrong recipient or corrupted wrap");
   const kem = Buffer4.concat([Buffer4.from("KEM"), KEM_ID]);
   const suite = Buffer4.concat([Buffer4.from("HPKE"), KEM_ID, KDF_ID, AEAD_ID]);
   const sharedSecret = labeledExpand(kem, "shared_secret", labeledExtract(kem, "eae_prk", dh, Buffer4.alloc(0)), Buffer4.concat([Buffer4.from(enc), Buffer4.from(sealingPublicRaw)]), 32);
@@ -110863,6 +110929,24 @@ var SIGNING_DOMAIN_TAGS = {
 function domainSeparatedMessage(purpose, payload) {
   return Buffer5.concat([Buffer5.from(SIGNING_DOMAIN_TAGS[purpose], "ascii"), Buffer5.from([0]), Buffer5.from(payload)]);
 }
+var CANONICAL_REASONS = {
+  json: "record-json",
+  "duplicate-key": "record-canonical-duplicate-key",
+  number: "record-canonical-number",
+  order: "record-canonical-order",
+  escape: "record-canonical-escape",
+  whitespace: "record-canonical-whitespace",
+  encoding: "record-canonical-encoding"
+};
+function parseCanonical(bytes, what) {
+  try {
+    return requireCanonicalJson(bytes);
+  } catch (error) {
+    if (!(error instanceof CanonicalJsonError))
+      throw error;
+    throw new DeviceKeyringSignError(CANONICAL_REASONS[error.violation], `sign: ${what} preimage is not RFC 8785 canonical JSON: ${error.message}`);
+  }
+}
 function validateSignRequest(request) {
   if (typeof request !== "object" || request === null) {
     throw new DeviceKeyringSignError("unknown-purpose", "sign: request must be a typed sign request");
@@ -110877,16 +110961,7 @@ function validateSignRequest(request) {
     if (!(request.canonicalJson instanceof Uint8Array)) {
       throw new DeviceKeyringSignError("record-json", "sign: record needs RFC 8785 canonical JSON bytes");
     }
-    let parsed;
-    try {
-      parsed = requireCanonicalJson(request.canonicalJson);
-    } catch (error) {
-      if (error instanceof CanonicalJsonError) {
-        const reason = error.violation === "json" ? "record-json" : error.violation === "duplicate-key" ? "record-canonical-duplicate-key" : error.violation === "number" ? "record-canonical-number" : error.violation === "order" ? "record-canonical-order" : error.violation === "escape" ? "record-canonical-escape" : error.violation === "whitespace" ? "record-canonical-whitespace" : "record-canonical-encoding";
-        throw new DeviceKeyringSignError(reason, `sign: record preimage is not RFC 8785 canonical JSON: ${error.message}`);
-      }
-      throw error;
-    }
+    const parsed = parseCanonical(request.canonicalJson, "record");
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed) || typeof parsed.t !== "string") {
       throw new DeviceKeyringSignError("record-json", 'sign: record preimage needs a top-level "t" string');
     }
@@ -110894,8 +110969,8 @@ function validateSignRequest(request) {
     if (!t.startsWith("omo-sync/v1/")) {
       throw new DeviceKeyringSignError("record-prefix", 'sign: record "t" must start with "omo-sync/v1/"');
     }
-    if (t === SIGNING_DOMAIN_TAGS["object-digest"]) {
-      throw new DeviceKeyringSignError("record-prefix", 'sign: record "t" must name a record or snapshot type, not the object-digest tag');
+    if (t === SIGNING_DOMAIN_TAGS["object-digest"] || t === SIGNING_DOMAIN_TAGS.snapshot) {
+      throw new DeviceKeyringSignError("record-prefix", `sign: record "t" must name a keyring record type, not another purpose's tag`);
     }
     return request.canonicalJson;
   }
@@ -110903,15 +110978,7 @@ function validateSignRequest(request) {
     if (!(request.canonicalJson instanceof Uint8Array)) {
       throw new DeviceKeyringSignError("record-json", "sign: snapshot needs RFC 8785 canonical JSON bytes");
     }
-    let parsed;
-    try {
-      parsed = requireCanonicalJson(request.canonicalJson);
-    } catch (error) {
-      if (error instanceof CanonicalJsonError) {
-        throw new DeviceKeyringSignError("record-canonical", `sign: snapshot preimage is not RFC 8785 canonical JSON: ${error.message}`);
-      }
-      throw error;
-    }
+    const parsed = parseCanonical(request.canonicalJson, "snapshot");
     const t = typeof parsed === "object" && parsed !== null ? parsed.t : undefined;
     if (t !== SIGNING_DOMAIN_TAGS.snapshot) {
       throw new DeviceKeyringSignError("snapshot-prefix", 'sign: snapshot preimage "t" must be exactly "omo-sync/v1/snapshot"');
@@ -110921,7 +110988,11 @@ function validateSignRequest(request) {
   throw new DeviceKeyringSignError("unknown-purpose", `sign: unsupported purpose ${JSON.stringify(request.purpose ?? null)}`);
 }
 var WRAP_INFO = Buffer5.concat([Buffer5.from("omo-sync/v1/wrap", "ascii"), Buffer5.from([0])]);
-var wrapAad = (binding) => Buffer5.from(`{"account":${JSON.stringify(binding.account)},"epoch":${binding.epoch},"id":${JSON.stringify(binding.id)}}`, "utf8");
+var wrapAad = (binding) => {
+  if (!Number.isSafeInteger(binding.epoch) || binding.epoch < 0)
+    throw new Error("unseal: the wrap epoch must be a non-negative integer");
+  return canonicalizeJson({ account: binding.account, epoch: binding.epoch, id: binding.id });
+};
 function generateDeviceKeyMaterial() {
   const signing = generateKeyPairSync("ed25519");
   const sealing = generateKeyPairSync("x25519");
