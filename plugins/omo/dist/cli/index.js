@@ -2132,7 +2132,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "5.1.38",
+    version: "5.1.40",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2309,7 +2309,7 @@ var init_package = __esm(() => {
     },
     devDependencies: {
       "@clack/prompts": "^1.8.1",
-      "@code-yeongyu/senpi": "2026.10.19",
+      "@code-yeongyu/senpi": "2026.10.19-2",
       "@modelcontextprotocol/sdk": "^1.30.0",
       "@oh-my-opencode/agents-md-core": "workspace:*",
       "@oh-my-opencode/ast-grep-mcp": "workspace:*",
@@ -2350,6 +2350,7 @@ var init_package = __esm(() => {
       "@opentui/core": "^0.5.11",
       "@opentui/keymap": "^0.5.11",
       "@types/js-yaml": "^4.0.9",
+      "@types/node": "26.6.2",
       "@types/picomatch": "^4.0.3",
       "@typescript/native-preview": "7.0.0-dev.20260707.2",
       "@typescript/typescript6": "6.0.2",
@@ -2369,18 +2370,18 @@ var init_package = __esm(() => {
       typescript: "^7.0.2"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "5.1.38",
-      "oh-my-opencode-darwin-x64": "5.1.38",
-      "oh-my-opencode-darwin-x64-baseline": "5.1.38",
-      "oh-my-opencode-linux-arm64": "5.1.38",
-      "oh-my-opencode-linux-arm64-musl": "5.1.38",
-      "oh-my-opencode-linux-x64": "5.1.38",
-      "oh-my-opencode-linux-x64-baseline": "5.1.38",
-      "oh-my-opencode-linux-x64-musl": "5.1.38",
-      "oh-my-opencode-linux-x64-musl-baseline": "5.1.38",
-      "oh-my-opencode-windows-arm64": "5.1.38",
-      "oh-my-opencode-windows-x64": "5.1.38",
-      "oh-my-opencode-windows-x64-baseline": "5.1.38"
+      "oh-my-opencode-darwin-arm64": "5.1.40",
+      "oh-my-opencode-darwin-x64": "5.1.40",
+      "oh-my-opencode-darwin-x64-baseline": "5.1.40",
+      "oh-my-opencode-linux-arm64": "5.1.40",
+      "oh-my-opencode-linux-arm64-musl": "5.1.40",
+      "oh-my-opencode-linux-x64": "5.1.40",
+      "oh-my-opencode-linux-x64-baseline": "5.1.40",
+      "oh-my-opencode-linux-x64-musl": "5.1.40",
+      "oh-my-opencode-linux-x64-musl-baseline": "5.1.40",
+      "oh-my-opencode-windows-arm64": "5.1.40",
+      "oh-my-opencode-windows-x64": "5.1.40",
+      "oh-my-opencode-windows-x64-baseline": "5.1.40"
     },
     overrides: {
       hono: "^4.13.8",
@@ -76780,17 +76781,23 @@ var init_computer = __esm(() => {
 });
 
 // packages/omo-config-core/src/schema/git-master.ts
-var OmoGitMasterSettingsShape, OmoGitMasterSettingsLayerSchema, OmoGitMasterSettingsSchema;
+var GIT_ENV_ASSIGNMENT_PATTERN, GitEnvPrefixSchema, OmoGitMasterSettingsShape, OmoGitMasterSettingsLayerSchema, OmoGitMasterSettingsSchema;
 var init_git_master = __esm(() => {
   init_zod();
+  GIT_ENV_ASSIGNMENT_PATTERN = /^(?:[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]*)(?: [A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]*)*$/;
+  GitEnvPrefixSchema = string2().refine((value) => value === "" || GIT_ENV_ASSIGNMENT_PATTERN.test(value), {
+    message: 'git_env_prefix must be empty or use shell-safe env assignments like "GIT_MASTER=1"'
+  });
   OmoGitMasterSettingsShape = {
     commit_footer: union([boolean2(), string2()]),
-    include_co_authored_by: boolean2()
+    include_co_authored_by: boolean2(),
+    git_env_prefix: GitEnvPrefixSchema
   };
   OmoGitMasterSettingsLayerSchema = object(OmoGitMasterSettingsShape).partial().strict();
   OmoGitMasterSettingsSchema = OmoGitMasterSettingsLayerSchema.extend({
     commit_footer: union([boolean2(), string2()]).default(false),
-    include_co_authored_by: boolean2().default(false)
+    include_co_authored_by: boolean2().default(false),
+    git_env_prefix: GitEnvPrefixSchema.default("GIT_MASTER=1")
   }).strict();
 });
 
@@ -82523,6 +82530,163 @@ function formatUuid(bytes) {
 var MAX_COUNTER = 4095, COUNTER_SEED_MASK = 2047, fallbackEventId;
 var init_event_id = __esm(() => {
   fallbackEventId = createUuidV7Generator();
+});
+
+// packages/telemetry-core/src/machine-id.ts
+import { createHash as createHash5 } from "crypto";
+import os4 from "os";
+function getDefaultTelemetryOsProvider() {
+  return os4;
+}
+function getTelemetryDistinctId(machineIdPrefix, osProvider = getDefaultTelemetryOsProvider()) {
+  return createHash5("sha256").update(`${machineIdPrefix}${osProvider.hostname()}`).digest("hex");
+}
+var init_machine_id = () => {};
+
+// packages/telemetry-core/src/injected-client.ts
+function isTelemetryClientEnabled(input) {
+  const env = input.env ?? process.env;
+  return !shouldDisableTelemetry({ env, productEnvPrefix: input.product.productEnvPrefix }) && hasTelemetryApiKey(env, input.product.defaultApiKey);
+}
+function createTelemetryClient(input) {
+  if (!isTelemetryClientEnabled(input)) {
+    return NO_OP_CLIENT;
+  }
+  const transport = createTransport(input);
+  if (transport === null) {
+    return NO_OP_CLIENT;
+  }
+  const sharedProperties = getSharedProperties(input);
+  return {
+    enabled: true,
+    trackActive: ({ dayUTC, distinctId, reason }) => {
+      try {
+        transport.capture({
+          distinctId,
+          event: input.product.eventName,
+          properties: {
+            ...sharedProperties,
+            $process_person_profile: false,
+            day_utc: dayUTC,
+            reason
+          }
+        });
+      } catch (error) {
+        input.diagnostics?.({
+          event: "telemetry_capture_failed",
+          source: input.source,
+          error,
+          errorKind: error instanceof Error ? "error" : "non_error"
+        });
+      }
+    },
+    flush: async () => {
+      if (transport.flush === undefined) {
+        return;
+      }
+      await transport.flush();
+    },
+    shutdown: async () => {
+      try {
+        await transport.shutdown();
+      } catch (error) {
+        input.diagnostics?.({
+          event: "telemetry_shutdown_failed",
+          source: input.source,
+          error,
+          errorKind: error instanceof Error ? "error" : "non_error"
+        });
+      }
+    }
+  };
+}
+function createTransport(input) {
+  const env = input.env ?? process.env;
+  const factory = input.transportFactory;
+  try {
+    return factory(getTelemetryApiKey(env, input.product.defaultApiKey), {
+      enableExceptionAutocapture: false,
+      enableLocalEvaluation: false,
+      strictLocalEvaluation: true,
+      disableRemoteConfig: true,
+      flushAt: 1,
+      flushInterval: 0,
+      host: getTelemetryHost(env, input.product.defaultHost),
+      disableGeoip: input.product.disableGeoip ?? false,
+      ...input.product.transportOptions
+    });
+  } catch (error) {
+    input.diagnostics?.({
+      event: "telemetry_posthog_init_failed",
+      source: input.source,
+      error,
+      errorKind: error instanceof Error ? "error" : "non_error"
+    });
+    return null;
+  }
+}
+function getSharedProperties(input) {
+  const osProvider = input.osProvider ?? getDefaultTelemetryOsProvider();
+  const cpuInfo = getSafeCpuInfo(osProvider, input);
+  return {
+    platform: input.product.platform,
+    product_name: input.product.productName,
+    package_name: input.product.packageName,
+    package_version: input.product.packageVersion,
+    runtime: "bun",
+    runtime_version: process.versions.bun ?? process.version,
+    source: input.source,
+    $os: osProvider.platform(),
+    $os_version: osProvider.release(),
+    os_arch: osProvider.arch(),
+    os_type: osProvider.type(),
+    cpu_count: cpuInfo.count,
+    cpu_model: cpuInfo.model,
+    total_memory_gb: Math.round(osProvider.totalmem() / 1024 / 1024 / 1024),
+    locale: Intl.DateTimeFormat().resolvedOptions().locale,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    shell: process.env.SHELL,
+    ci: Boolean(process.env.CI),
+    terminal: process.env.TERM_PROGRAM,
+    ...input.product.additionalProperties
+  };
+}
+function getSafeCpuInfo(osProvider, input) {
+  try {
+    const cpuInfo = osProvider.cpus();
+    return {
+      count: cpuInfo.length,
+      model: cpuInfo[0]?.model
+    };
+  } catch (error) {
+    input.diagnostics?.({
+      event: "telemetry_cpu_info_unavailable",
+      source: "shared",
+      error,
+      errorKind: error instanceof Error ? "error" : "non_error"
+    });
+    return {
+      count: 0,
+      model: undefined
+    };
+  }
+}
+var NO_OP_CLIENT;
+var init_injected_client = __esm(() => {
+  init_env();
+  init_machine_id();
+  NO_OP_CLIENT = {
+    enabled: false,
+    trackActive: () => {
+      return;
+    },
+    flush: async () => {
+      return;
+    },
+    shutdown: async () => {
+      return;
+    }
+  };
 });
 
 // node_modules/.bun/posthog-node@5.52.4/node_modules/posthog-node/dist/extensions/error-tracking/modifiers/module.node.mjs
@@ -91898,18 +92062,7 @@ var init_index_node = __esm(() => {
   };
 });
 
-// packages/telemetry-core/src/machine-id.ts
-import { createHash as createHash5 } from "crypto";
-import os4 from "os";
-function getDefaultTelemetryOsProvider() {
-  return os4;
-}
-function getTelemetryDistinctId(machineIdPrefix, osProvider = getDefaultTelemetryOsProvider()) {
-  return createHash5("sha256").update(`${machineIdPrefix}${osProvider.hostname()}`).digest("hex");
-}
-var init_machine_id = () => {};
-
-// packages/telemetry-core/src/posthog-client.ts
+// packages/telemetry-core/src/posthog-transport.ts
 class PostHogTelemetryTransport {
   #client;
   constructor(apiKey, options) {
@@ -91928,161 +92081,21 @@ class PostHogTelemetryTransport {
 function createDefaultPostHogTransport(apiKey, options) {
   return new PostHogTelemetryTransport(apiKey, options);
 }
-function isTelemetryClientEnabled(input) {
-  const env = input.env ?? process.env;
-  return !shouldDisableTelemetry({ env, productEnvPrefix: input.product.productEnvPrefix }) && hasTelemetryApiKey(env, input.product.defaultApiKey);
-}
-function createTelemetryClient(input) {
-  if (!isTelemetryClientEnabled(input)) {
-    return NO_OP_CLIENT;
-  }
-  const transport = createTransport(input);
-  if (transport === null) {
-    return NO_OP_CLIENT;
-  }
-  const sharedProperties = getSharedProperties(input);
-  return {
-    enabled: true,
-    trackActive: ({ dayUTC, distinctId, reason }) => {
-      try {
-        transport.capture({
-          distinctId,
-          event: input.product.eventName,
-          properties: {
-            ...sharedProperties,
-            $process_person_profile: false,
-            day_utc: dayUTC,
-            reason
-          }
-        });
-      } catch (error) {
-        input.diagnostics?.({
-          event: "telemetry_capture_failed",
-          source: input.source,
-          error,
-          errorKind: error instanceof Error ? "error" : "non_error"
-        });
-      }
-    },
-    flush: async () => {
-      if (transport.flush === undefined) {
-        return;
-      }
-      await transport.flush();
-    },
-    shutdown: async () => {
-      try {
-        await transport.shutdown();
-      } catch (error) {
-        input.diagnostics?.({
-          event: "telemetry_shutdown_failed",
-          source: input.source,
-          error,
-          errorKind: error instanceof Error ? "error" : "non_error"
-        });
-      }
-    }
-  };
-}
-function createTransport(input) {
-  const env = input.env ?? process.env;
-  const factory = input.transportFactory ?? createDefaultPostHogTransport;
-  try {
-    return factory(getTelemetryApiKey(env, input.product.defaultApiKey), {
-      enableExceptionAutocapture: false,
-      enableLocalEvaluation: false,
-      strictLocalEvaluation: true,
-      disableRemoteConfig: true,
-      flushAt: 1,
-      flushInterval: 0,
-      host: getTelemetryHost(env, input.product.defaultHost),
-      disableGeoip: input.product.disableGeoip ?? false,
-      ...input.product.transportOptions
-    });
-  } catch (error) {
-    input.diagnostics?.({
-      event: "telemetry_posthog_init_failed",
-      source: input.source,
-      error,
-      errorKind: error instanceof Error ? "error" : "non_error"
-    });
-    return null;
-  }
-}
-function getSharedProperties(input) {
-  const osProvider = input.osProvider ?? getDefaultTelemetryOsProvider();
-  const cpuInfo = getSafeCpuInfo(osProvider, input);
-  return {
-    platform: input.product.platform,
-    product_name: input.product.productName,
-    package_name: input.product.packageName,
-    package_version: input.product.packageVersion,
-    runtime: "bun",
-    runtime_version: process.versions.bun ?? process.version,
-    source: input.source,
-    $os: osProvider.platform(),
-    $os_version: osProvider.release(),
-    os_arch: osProvider.arch(),
-    os_type: osProvider.type(),
-    cpu_count: cpuInfo.count,
-    cpu_model: cpuInfo.model,
-    total_memory_gb: Math.round(osProvider.totalmem() / 1024 / 1024 / 1024),
-    locale: Intl.DateTimeFormat().resolvedOptions().locale,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    shell: process.env.SHELL,
-    ci: Boolean(process.env.CI),
-    terminal: process.env.TERM_PROGRAM,
-    ...input.product.additionalProperties
-  };
-}
-function getSafeCpuInfo(osProvider, input) {
-  try {
-    const cpuInfo = osProvider.cpus();
-    return {
-      count: cpuInfo.length,
-      model: cpuInfo[0]?.model
-    };
-  } catch (error) {
-    input.diagnostics?.({
-      event: "telemetry_cpu_info_unavailable",
-      source: "shared",
-      error,
-      errorKind: error instanceof Error ? "error" : "non_error"
-    });
-    return {
-      count: 0,
-      model: undefined
-    };
-  }
-}
-var NO_OP_CLIENT;
-var init_posthog_client = __esm(() => {
+var init_posthog_transport = __esm(() => {
   init_index_node();
-  init_env();
-  init_machine_id();
-  NO_OP_CLIENT = {
-    enabled: false,
-    trackActive: () => {
-      return;
-    },
-    flush: async () => {
-      return;
-    },
-    shutdown: async () => {
-      return;
-    }
-  };
 });
 
 // packages/telemetry-core/src/events.ts
-var ALLOWED_DOLLAR_KEYS;
-var init_events = __esm(() => {
-  ALLOWED_DOLLAR_KEYS = new Set([
-    "$os",
-    "$os_version",
-    "$process_person_profile",
-    "$session_id"
-  ]);
+var init_events = () => {};
+
+// packages/telemetry-core/src/posthog-client.ts
+function createTelemetryClient2(input) {
+  return createTelemetryClient({ ...input, transportFactory: input.transportFactory ?? createDefaultPostHogTransport });
+}
+var init_posthog_client = __esm(() => {
+  init_injected_client();
+  init_posthog_transport();
+  init_posthog_transport();
 });
 
 // packages/telemetry-core/src/record-daily-active.ts
@@ -92106,7 +92119,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "5.1.38",
+    version: "5.1.40",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -92236,7 +92249,7 @@ function resolveActivityStateProvider(options) {
   return () => getPostHogActivityCaptureState(options.now ?? new Date);
 }
 function createPostHogClient(source, options = {}) {
-  const client = createTelemetryClient({
+  const client = createTelemetryClient2({
     diagnostics: writeTelemetryDiagnostic2,
     env: options.env ?? process.env,
     osProvider: options.osProvider ?? resolveOsProvider(),
@@ -99405,6 +99418,12 @@ var REQUIRED_PLUGIN_ARTIFACTS = [
   join63("extensions", "omo-memory-doctor.js"),
   join63("extensions", "omo-memory-memfs.js"),
   join63("extensions", "omo-memory-palace.js"),
+  join63("extensions", "omo-session-history.js"),
+  join63("extensions", "omo-recall-store.js"),
+  join63("extensions", "omo-telemetry-posthog.js"),
+  join63("extensions", "omo-memory-sync.js"),
+  join63("extensions", "loro_wasm_bg.wasm"),
+  join63("extensions", "CaseFolding.txt"),
   join63("extensions", "omo-thread-client.js"),
   join63("extensions", "assets.generated.json"),
   join63("extensions", "omo-member.js"),
@@ -103734,21 +103753,21 @@ var GoalConfigSchema = object({
 });
 // packages/skills-loader-core/src/config/git-env-prefix.ts
 init_zod();
-var GIT_ENV_ASSIGNMENT_PATTERN = /^(?:[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]*)(?: [A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]*)*$/;
+var GIT_ENV_ASSIGNMENT_PATTERN2 = /^(?:[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]*)(?: [A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]*)*$/;
 var GIT_ENV_PREFIX_VALIDATION_MESSAGE = 'git_env_prefix must be empty or use shell-safe env assignments like "GIT_MASTER=1"';
 function isValidGitEnvPrefix(value) {
   if (value === "") {
     return true;
   }
-  return GIT_ENV_ASSIGNMENT_PATTERN.test(value);
+  return GIT_ENV_ASSIGNMENT_PATTERN2.test(value);
 }
-var GitEnvPrefixSchema = string2().refine(isValidGitEnvPrefix, { message: GIT_ENV_PREFIX_VALIDATION_MESSAGE }).default("GIT_MASTER=1");
+var GitEnvPrefixSchema2 = string2().refine(isValidGitEnvPrefix, { message: GIT_ENV_PREFIX_VALIDATION_MESSAGE }).default("GIT_MASTER=1");
 // packages/omo-opencode/src/config/schema/git-master.ts
 init_zod();
 var GitMasterConfigSchema = object({
   commit_footer: union([boolean2(), string2()]).default(false),
   include_co_authored_by: boolean2().default(false),
-  git_env_prefix: GitEnvPrefixSchema
+  git_env_prefix: GitEnvPrefixSchema2
 });
 // packages/omo-opencode/src/config/schema/hooks.ts
 init_zod();
@@ -106014,7 +106033,7 @@ function createPostHogClient2(source, options = {}) {
   if (shouldDisablePostHog(env, options.configEnabled)) {
     return NO_OP_POSTHOG2;
   }
-  const client = createTelemetryClient({
+  const client = createTelemetryClient2({
     diagnostics: logTelemetryDiagnostic,
     env: createCoreCompatibleTelemetryEnv(env),
     osProvider: resolveOsProvider2(),

@@ -7100,14 +7100,20 @@ var OmoComputerSettingsLayerSchema = object({
 var OmoComputerSettingsSchema = OmoComputerSettingsLayerSchema;
 
 // ../../omo-config-core/src/schema/git-master.ts
+var GIT_ENV_ASSIGNMENT_PATTERN = /^(?:[A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]*)(?: [A-Za-z_][A-Za-z0-9_]*=[A-Za-z0-9_-]*)*$/;
+var GitEnvPrefixSchema = string2().refine((value) => value === "" || GIT_ENV_ASSIGNMENT_PATTERN.test(value), {
+  message: 'git_env_prefix must be empty or use shell-safe env assignments like "GIT_MASTER=1"'
+});
 var OmoGitMasterSettingsShape = {
   commit_footer: union([boolean2(), string2()]),
-  include_co_authored_by: boolean2()
+  include_co_authored_by: boolean2(),
+  git_env_prefix: GitEnvPrefixSchema
 };
 var OmoGitMasterSettingsLayerSchema = object(OmoGitMasterSettingsShape).partial().strict();
 var OmoGitMasterSettingsSchema = OmoGitMasterSettingsLayerSchema.extend({
   commit_footer: union([boolean2(), string2()]).default(false),
-  include_co_authored_by: boolean2().default(false)
+  include_co_authored_by: boolean2().default(false),
+  git_env_prefix: GitEnvPrefixSchema.default("GIT_MASTER=1")
 }).strict();
 
 // ../../omo-config-core/src/schema/harness.ts
