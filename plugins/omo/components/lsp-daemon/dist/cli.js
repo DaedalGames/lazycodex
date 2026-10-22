@@ -1404,6 +1404,13 @@ function validateCwd(cwd) {
     };
   }
 }
+function guardPipeErrors(stream, pipe) {
+  stream.on("error", (error) => {
+    if (stream.listenerCount("error") > 1)
+      return;
+    reportBestEffortCleanupError(`server ${pipe}`, error);
+  });
+}
 function wrap(proc) {
   const exitedPromise = new Promise((resolve) => {
     proc.once("close", (code) => resolve(code ?? 0));
@@ -1412,6 +1419,9 @@ function wrap(proc) {
   if (!proc.stdin || !proc.stdout || !proc.stderr) {
     throw new LspProcessSpawnError("Spawned process is missing one of stdin/stdout/stderr pipes");
   }
+  guardPipeErrors(proc.stdin, "stdin");
+  guardPipeErrors(proc.stdout, "stdout");
+  guardPipeErrors(proc.stderr, "stderr");
   return {
     stdin: proc.stdin,
     stdout: proc.stdout,

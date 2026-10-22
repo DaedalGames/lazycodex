@@ -2133,7 +2133,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "5.1.40",
+    version: "5.1.41",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2310,7 +2310,7 @@ var init_package = __esm(() => {
     },
     devDependencies: {
       "@clack/prompts": "^1.8.1",
-      "@code-yeongyu/senpi": "2026.10.19-2",
+      "@code-yeongyu/senpi": "2026.10.21-1",
       "@modelcontextprotocol/sdk": "^1.30.0",
       "@oh-my-opencode/agents-md-core": "workspace:*",
       "@oh-my-opencode/ast-grep-mcp": "workspace:*",
@@ -2371,18 +2371,18 @@ var init_package = __esm(() => {
       typescript: "^7.0.2"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "5.1.40",
-      "oh-my-opencode-darwin-x64": "5.1.40",
-      "oh-my-opencode-darwin-x64-baseline": "5.1.40",
-      "oh-my-opencode-linux-arm64": "5.1.40",
-      "oh-my-opencode-linux-arm64-musl": "5.1.40",
-      "oh-my-opencode-linux-x64": "5.1.40",
-      "oh-my-opencode-linux-x64-baseline": "5.1.40",
-      "oh-my-opencode-linux-x64-musl": "5.1.40",
-      "oh-my-opencode-linux-x64-musl-baseline": "5.1.40",
-      "oh-my-opencode-windows-arm64": "5.1.40",
-      "oh-my-opencode-windows-x64": "5.1.40",
-      "oh-my-opencode-windows-x64-baseline": "5.1.40"
+      "oh-my-opencode-darwin-arm64": "5.1.41",
+      "oh-my-opencode-darwin-x64": "5.1.41",
+      "oh-my-opencode-darwin-x64-baseline": "5.1.41",
+      "oh-my-opencode-linux-arm64": "5.1.41",
+      "oh-my-opencode-linux-arm64-musl": "5.1.41",
+      "oh-my-opencode-linux-x64": "5.1.41",
+      "oh-my-opencode-linux-x64-baseline": "5.1.41",
+      "oh-my-opencode-linux-x64-musl": "5.1.41",
+      "oh-my-opencode-linux-x64-musl-baseline": "5.1.41",
+      "oh-my-opencode-windows-arm64": "5.1.41",
+      "oh-my-opencode-windows-x64": "5.1.41",
+      "oh-my-opencode-windows-x64-baseline": "5.1.41"
     },
     overrides: {
       hono: "^4.13.8",
@@ -76891,10 +76891,29 @@ var init_harness = __esm(() => {
   OMO_CONFIG_LEGACY_HARNESS_IDS = Object.keys(OMO_CONFIG_LEGACY_HARNESS_ALIASES);
 });
 
+// packages/omo-config-core/src/schema/memory-agreements.ts
+var OMO_MEMORY_AGREEMENTS_DEFAULTS, OmoMemoryAgreementsSchema, OmoMemoryAgreementsLayerSchema;
+var init_memory_agreements = __esm(() => {
+  init_zod();
+  OMO_MEMORY_AGREEMENTS_DEFAULTS = { enabled: true, needs_human_threshold: 3, max_items: 64 };
+  OmoMemoryAgreementsSchema = object({
+    enabled: boolean2().default(OMO_MEMORY_AGREEMENTS_DEFAULTS.enabled),
+    needs_human_threshold: number2().int().min(1).default(OMO_MEMORY_AGREEMENTS_DEFAULTS.needs_human_threshold),
+    max_items: number2().int().min(8).max(256).default(OMO_MEMORY_AGREEMENTS_DEFAULTS.max_items)
+  }).strict();
+  OmoMemoryAgreementsLayerSchema = object({
+    enabled: boolean2().optional(),
+    needs_human_threshold: number2().int().min(1).optional(),
+    max_items: number2().int().min(8).max(256).optional()
+  }).strict();
+});
+
 // packages/omo-config-core/src/schema/memory.ts
 var OmoMemoryReflectionTriggerSchema, OmoMemoryReflectionSchema, OmoMemorySyncSchema, OmoMemorySearchSchema, OmoMemoryRecallEventCapsSchema, OmoMemoryRecallSchema, OmoMemoryNudgeSchema, OmoMemoryFactsSchema, OmoMemoryDreamSchema, OmoMemoryPeopleSchema, OmoMemorySoulSchema, OmoMemoryWriteNoticeSchema, OmoMemoryReflectionTriggerLayerSchema, OmoMemoryReflectionLayerSchema, OmoMemorySyncLayerSchema, OmoMemorySearchLayerSchema, OmoMemoryRecallEventCapsLayerSchema, OmoMemoryRecallLayerSchema, OmoMemoryNudgeLayerSchema, OmoMemoryFactsLayerSchema, OmoMemoryDreamLayerSchema, OmoMemoryPeopleLayerSchema, OmoMemorySoulLayerSchema, OmoMemoryWriteNoticeLayerSchema, OmoMemoryProjectionSchema, OmoMemoryProjectionLayerSchema, OmoMemoryAgentOverridesSchema, OmoMemorySettingsSchema, OmoMemorySettingsLayerSchema;
 var init_memory = __esm(() => {
   init_zod();
+  init_memory_agreements();
+  init_memory_agreements();
   OmoMemoryReflectionTriggerSchema = object({
     step_count: number2().int().nonnegative().default(25),
     on_compaction: boolean2().default(true)
@@ -77037,6 +77056,7 @@ var init_memory = __esm(() => {
     facts: OmoMemoryFactsLayerSchema.optional(),
     dream: OmoMemoryDreamLayerSchema.optional(),
     people: OmoMemoryPeopleLayerSchema.optional(),
+    agreements: OmoMemoryAgreementsLayerSchema.optional(),
     soul: OmoMemorySoulLayerSchema.optional(),
     write_notice: OmoMemoryWriteNoticeLayerSchema.optional(),
     sync: OmoMemorySyncLayerSchema.optional(),
@@ -77067,6 +77087,7 @@ var init_memory = __esm(() => {
       auto_select_max_chars: 150000
     }),
     people: OmoMemoryPeopleSchema.default({ enabled: true, max_entries: 40, max_entry_chars: 200 }),
+    agreements: OmoMemoryAgreementsSchema.default(OMO_MEMORY_AGREEMENTS_DEFAULTS),
     soul: OmoMemorySoulSchema.default({ edit_notice: true }),
     write_notice: OmoMemoryWriteNoticeSchema.default({ enabled: true }),
     sync: OmoMemorySyncSchema.default({ enabled: true }),
@@ -77093,6 +77114,7 @@ var init_memory = __esm(() => {
     facts: OmoMemoryFactsLayerSchema.optional(),
     dream: OmoMemoryDreamLayerSchema.optional(),
     people: OmoMemoryPeopleLayerSchema.optional(),
+    agreements: OmoMemoryAgreementsLayerSchema.optional(),
     soul: OmoMemorySoulLayerSchema.optional(),
     write_notice: OmoMemoryWriteNoticeLayerSchema.optional(),
     sync: OmoMemorySyncLayerSchema.optional(),
@@ -92198,7 +92220,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "5.1.40",
+    version: "5.1.41",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -99504,6 +99526,7 @@ var REQUIRED_PLUGIN_ARTIFACTS = [
   join63("extensions", "loro_wasm_bg.wasm"),
   join63("extensions", "CaseFolding.txt"),
   join63("extensions", "omo-thread-client.js"),
+  join63("extensions", "omo-feedback.js"),
   join63("extensions", "assets.generated.json"),
   join63("extensions", "omo-member.js"),
   join63("extensions", "memory-run-supervisor.mjs"),

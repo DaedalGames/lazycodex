@@ -7123,6 +7123,19 @@ var OmoHarnessIdSchema = _enum(OMO_CONFIG_HARNESS_IDS);
 var OMO_CONFIG_LEGACY_HARNESS_ALIASES = { senpi: "native" };
 var OMO_CONFIG_LEGACY_HARNESS_IDS = Object.keys(OMO_CONFIG_LEGACY_HARNESS_ALIASES);
 
+// ../../omo-config-core/src/schema/memory-agreements.ts
+var OMO_MEMORY_AGREEMENTS_DEFAULTS = { enabled: true, needs_human_threshold: 3, max_items: 64 };
+var OmoMemoryAgreementsSchema = object({
+  enabled: boolean2().default(OMO_MEMORY_AGREEMENTS_DEFAULTS.enabled),
+  needs_human_threshold: number2().int().min(1).default(OMO_MEMORY_AGREEMENTS_DEFAULTS.needs_human_threshold),
+  max_items: number2().int().min(8).max(256).default(OMO_MEMORY_AGREEMENTS_DEFAULTS.max_items)
+}).strict();
+var OmoMemoryAgreementsLayerSchema = object({
+  enabled: boolean2().optional(),
+  needs_human_threshold: number2().int().min(1).optional(),
+  max_items: number2().int().min(8).max(256).optional()
+}).strict();
+
 // ../../omo-config-core/src/schema/memory.ts
 var OmoMemoryReflectionTriggerSchema = object({
   step_count: number2().int().nonnegative().default(25),
@@ -7266,6 +7279,7 @@ var OmoMemoryAgentOverridesSchema = object({
   facts: OmoMemoryFactsLayerSchema.optional(),
   dream: OmoMemoryDreamLayerSchema.optional(),
   people: OmoMemoryPeopleLayerSchema.optional(),
+  agreements: OmoMemoryAgreementsLayerSchema.optional(),
   soul: OmoMemorySoulLayerSchema.optional(),
   write_notice: OmoMemoryWriteNoticeLayerSchema.optional(),
   sync: OmoMemorySyncLayerSchema.optional(),
@@ -7296,6 +7310,7 @@ var OmoMemorySettingsSchema = object({
     auto_select_max_chars: 150000
   }),
   people: OmoMemoryPeopleSchema.default({ enabled: true, max_entries: 40, max_entry_chars: 200 }),
+  agreements: OmoMemoryAgreementsSchema.default(OMO_MEMORY_AGREEMENTS_DEFAULTS),
   soul: OmoMemorySoulSchema.default({ edit_notice: true }),
   write_notice: OmoMemoryWriteNoticeSchema.default({ enabled: true }),
   sync: OmoMemorySyncSchema.default({ enabled: true }),
@@ -7322,6 +7337,7 @@ var OmoMemorySettingsLayerSchema = object({
   facts: OmoMemoryFactsLayerSchema.optional(),
   dream: OmoMemoryDreamLayerSchema.optional(),
   people: OmoMemoryPeopleLayerSchema.optional(),
+  agreements: OmoMemoryAgreementsLayerSchema.optional(),
   soul: OmoMemorySoulLayerSchema.optional(),
   write_notice: OmoMemoryWriteNoticeLayerSchema.optional(),
   sync: OmoMemorySyncLayerSchema.optional(),
