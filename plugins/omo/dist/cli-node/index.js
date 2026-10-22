@@ -2133,7 +2133,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "5.1.41",
+    version: "5.1.42",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2310,7 +2310,7 @@ var init_package = __esm(() => {
     },
     devDependencies: {
       "@clack/prompts": "^1.8.1",
-      "@code-yeongyu/senpi": "2026.10.21-1",
+      "@code-yeongyu/senpi": "2026.10.21-2",
       "@modelcontextprotocol/sdk": "^1.30.0",
       "@oh-my-opencode/agents-md-core": "workspace:*",
       "@oh-my-opencode/ast-grep-mcp": "workspace:*",
@@ -2371,18 +2371,18 @@ var init_package = __esm(() => {
       typescript: "^7.0.2"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "5.1.41",
-      "oh-my-opencode-darwin-x64": "5.1.41",
-      "oh-my-opencode-darwin-x64-baseline": "5.1.41",
-      "oh-my-opencode-linux-arm64": "5.1.41",
-      "oh-my-opencode-linux-arm64-musl": "5.1.41",
-      "oh-my-opencode-linux-x64": "5.1.41",
-      "oh-my-opencode-linux-x64-baseline": "5.1.41",
-      "oh-my-opencode-linux-x64-musl": "5.1.41",
-      "oh-my-opencode-linux-x64-musl-baseline": "5.1.41",
-      "oh-my-opencode-windows-arm64": "5.1.41",
-      "oh-my-opencode-windows-x64": "5.1.41",
-      "oh-my-opencode-windows-x64-baseline": "5.1.41"
+      "oh-my-opencode-darwin-arm64": "5.1.42",
+      "oh-my-opencode-darwin-x64": "5.1.42",
+      "oh-my-opencode-darwin-x64-baseline": "5.1.42",
+      "oh-my-opencode-linux-arm64": "5.1.42",
+      "oh-my-opencode-linux-arm64-musl": "5.1.42",
+      "oh-my-opencode-linux-x64": "5.1.42",
+      "oh-my-opencode-linux-x64-baseline": "5.1.42",
+      "oh-my-opencode-linux-x64-musl": "5.1.42",
+      "oh-my-opencode-linux-x64-musl-baseline": "5.1.42",
+      "oh-my-opencode-windows-arm64": "5.1.42",
+      "oh-my-opencode-windows-x64": "5.1.42",
+      "oh-my-opencode-windows-x64-baseline": "5.1.42"
     },
     overrides: {
       hono: "^4.13.8",
@@ -76909,7 +76909,7 @@ var init_memory_agreements = __esm(() => {
 });
 
 // packages/omo-config-core/src/schema/memory.ts
-var OmoMemoryReflectionTriggerSchema, OmoMemoryReflectionSchema, OmoMemorySyncSchema, OmoMemorySearchSchema, OmoMemoryRecallEventCapsSchema, OmoMemoryRecallSchema, OmoMemoryNudgeSchema, OmoMemoryFactsSchema, OmoMemoryDreamSchema, OmoMemoryPeopleSchema, OmoMemorySoulSchema, OmoMemoryWriteNoticeSchema, OmoMemoryReflectionTriggerLayerSchema, OmoMemoryReflectionLayerSchema, OmoMemorySyncLayerSchema, OmoMemorySearchLayerSchema, OmoMemoryRecallEventCapsLayerSchema, OmoMemoryRecallLayerSchema, OmoMemoryNudgeLayerSchema, OmoMemoryFactsLayerSchema, OmoMemoryDreamLayerSchema, OmoMemoryPeopleLayerSchema, OmoMemorySoulLayerSchema, OmoMemoryWriteNoticeLayerSchema, OmoMemoryProjectionSchema, OmoMemoryProjectionLayerSchema, OmoMemoryAgentOverridesSchema, OmoMemorySettingsSchema, OmoMemorySettingsLayerSchema;
+var OmoMemoryReflectionTriggerSchema, OmoMemoryReflectionSchema, OmoMemorySyncSchema, OmoMemorySearchSchema, OmoMemoryRecallEventCapsSchema, OmoMemoryRecallSchema, OmoMemoryNudgeSchema, OmoMemoryFactsSchema, OmoMemoryDreamSchema, OmoMemoryPeopleSchema, OmoMemorySoulSchema, OmoMemoryWriteNoticeSchema, OmoMemoryReflectionTriggerLayerSchema, OmoMemoryReflectionLayerSchema, OmoMemorySyncLayerSchema, OmoMemorySearchLayerSchema, OmoMemoryRecallEventCapsLayerSchema, OmoMemoryRecallLayerSchema, OmoMemoryNudgeLayerSchema, OmoMemoryFactsLayerSchema, OmoMemoryDreamLayerSchema, OmoMemoryPeopleLayerSchema, OmoMemorySoulLayerSchema, OmoMemoryWriteNoticeLayerSchema, OmoMemoryProjectionSchema, OmoMemoryProjectionLayerSchema, OmoMemoryAgentOverridesSchema, OmoMemoryAutoIdentitySchema, OmoMemorySettingsSchema, OmoMemorySettingsLayerSchema;
 var init_memory = __esm(() => {
   init_zod();
   init_memory_agreements();
@@ -77065,9 +77065,11 @@ var init_memory = __esm(() => {
     projection: OmoMemoryProjectionLayerSchema.optional(),
     compile_warn_tokens: number2().int().positive().optional()
   }).strict();
+  OmoMemoryAutoIdentitySchema = _enum(["path", "git"]);
   OmoMemorySettingsSchema = object({
     enabled: boolean2().default(true),
     agent: string2().min(1).default("auto"),
+    auto_identity: OmoMemoryAutoIdentitySchema.default("path"),
     reflection: OmoMemoryReflectionSchema.default({
       enabled: true,
       trigger: { step_count: 25, on_compaction: true },
@@ -77109,6 +77111,7 @@ var init_memory = __esm(() => {
   OmoMemorySettingsLayerSchema = object({
     enabled: boolean2().optional(),
     agent: string2().min(1).optional(),
+    auto_identity: OmoMemoryAutoIdentitySchema.optional(),
     reflection: OmoMemoryReflectionLayerSchema.optional(),
     nudge: OmoMemoryNudgeLayerSchema.optional(),
     facts: OmoMemoryFactsLayerSchema.optional(),
@@ -77158,6 +77161,7 @@ var init_model_profile = __esm(() => {
   init_fallback_models();
   OmoModelProfileInputSchema = object({
     display_name: string2().optional(),
+    caution: string2().optional(),
     family: _enum(["daily", "geeky"]).optional(),
     tier: _enum(["normal", "heavy"]).optional(),
     models: array(union([string2(), OmoFallbackModelObjectSchema])).optional()
@@ -77451,7 +77455,7 @@ var init_gateway = __esm(() => {
 });
 
 // packages/omo-config-core/src/schema/config.ts
-var OmoOpenCodeHarnessConfigSchema, OmoDisabledSkillsSchema, OmoTypedHarnessConfigSchema, OmoConfigProfileSchema, OmoConfigSchema, OmoConfigLayerSchema;
+var OmoOpenCodeHarnessConfigSchema, OmoDisabledSkillsSchema, OmoExcludedModelsSchema, OmoTypedHarnessConfigSchema, OmoConfigProfileSchema, OmoConfigSchema, OmoConfigLayerSchema;
 var init_config = __esm(() => {
   init_zod();
   init_agent();
@@ -77469,6 +77473,7 @@ var init_config = __esm(() => {
   init_gateway();
   OmoOpenCodeHarnessConfigSchema = record(string2(), unknown());
   OmoDisabledSkillsSchema = array(string2());
+  OmoExcludedModelsSchema = array(string2());
   OmoTypedHarnessConfigSchema = object({
     formatOnMutation: OmoFormatOnMutationLayerSchema.optional(),
     gateway: OmoGatewaySectionSchema.optional(),
@@ -77484,7 +77489,8 @@ var init_config = __esm(() => {
     telemetry: OmoTelemetrySettingsLayerSchema.optional(),
     side_panel: OmoSidePanelSettingsLayerSchema.optional(),
     computer: OmoComputerSettingsLayerSchema.optional(),
-    disabled_skills: OmoDisabledSkillsSchema.optional()
+    disabled_skills: OmoDisabledSkillsSchema.optional(),
+    exclude_models: OmoExcludedModelsSchema.optional()
   }).strict();
   OmoConfigProfileSchema = object({
     formatOnMutation: OmoFormatOnMutationLayerSchema.optional(),
@@ -77501,6 +77507,7 @@ var init_config = __esm(() => {
     side_panel: OmoSidePanelSettingsLayerSchema.optional(),
     computer: OmoComputerSettingsLayerSchema.optional(),
     disabled_skills: OmoDisabledSkillsSchema.optional(),
+    exclude_models: OmoExcludedModelsSchema.optional(),
     "[opencode]": OmoOpenCodeHarnessConfigSchema.optional(),
     "[native]": OmoTypedHarnessConfigSchema.optional(),
     "[senpi]": OmoTypedHarnessConfigSchema.optional(),
@@ -77523,6 +77530,7 @@ var init_config = __esm(() => {
     side_panel: OmoSidePanelSettingsSchema.optional(),
     computer: OmoComputerSettingsSchema.optional(),
     disabled_skills: OmoDisabledSkillsSchema.optional(),
+    exclude_models: OmoExcludedModelsSchema.optional(),
     "[opencode]": OmoOpenCodeHarnessConfigSchema.optional(),
     "[native]": OmoTypedHarnessConfigSchema.optional(),
     "[senpi]": OmoTypedHarnessConfigSchema.optional(),
@@ -77548,6 +77556,7 @@ var init_config = __esm(() => {
     side_panel: OmoSidePanelSettingsLayerSchema.optional(),
     computer: OmoComputerSettingsLayerSchema.optional(),
     disabled_skills: OmoDisabledSkillsSchema.optional(),
+    exclude_models: OmoExcludedModelsSchema.optional(),
     "[opencode]": OmoOpenCodeHarnessConfigSchema.optional(),
     "[native]": OmoTypedHarnessConfigSchema.optional(),
     "[senpi]": OmoTypedHarnessConfigSchema.optional(),
@@ -77756,7 +77765,51 @@ var init_diagnostic_lines = __esm(() => {
 });
 
 // packages/omo-config-core/src/loader/disabled-skills.ts
-var init_disabled_skills = () => {};
+function toRecord(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return;
+  return value;
+}
+function namesAt(record, key) {
+  const value = record?.[key];
+  if (!Array.isArray(value))
+    return [];
+  return value.filter((entry) => typeof entry === "string" && entry.trim() !== "");
+}
+function harnessBlockKeys(harness) {
+  const canonical = canonicalHarnessName(harness);
+  const legacy = Object.entries(OMO_CONFIG_LEGACY_HARNESS_ALIASES).filter(([, target]) => target === canonical).map(([name]) => harnessBlockKey(name));
+  return [harnessBlockKey(canonical), ...legacy];
+}
+function scopesOf(config, harness) {
+  if (harness === undefined)
+    return [config];
+  return [config, ...harnessBlockKeys(harness).map((key) => toRecord(config[key]))];
+}
+function collectExcludedModels(options) {
+  return collectUnionedList("exclude_models", options);
+}
+function collectUnionedList(key, options) {
+  const names = new Set;
+  for (const layer of options.layers) {
+    const config = toRecord(layer.config);
+    if (config === undefined)
+      continue;
+    const profile = options.profile === undefined ? undefined : toRecord(toRecord(config["profiles"])?.[options.profile]);
+    const scopes = [
+      ...scopesOf(config, options.harness),
+      ...profile === undefined ? [] : scopesOf(profile, options.harness)
+    ];
+    for (const scope of scopes) {
+      for (const name of namesAt(scope, key))
+        names.add(name.trim());
+    }
+  }
+  return [...names];
+}
+var init_disabled_skills = __esm(() => {
+  init_schema();
+});
 
 // packages/omo-config-core/src/loader/merge.ts
 function isUnsafeObjectKey2(key) {
@@ -77992,7 +78045,7 @@ function stripUnrecognizedKeys(record, issues) {
   }
   return { issuePaths, stripped };
 }
-function toRecord(value) {
+function toRecord2(value) {
   if (value === null || typeof value !== "object" || Array.isArray(value))
     return null;
   const record = {};
@@ -78003,7 +78056,7 @@ function toRecord(value) {
 }
 function validateConfigLayer(path, data) {
   const sanitized = sanitizeUnsafeKeys(data);
-  const record = toRecord(sanitized.value);
+  const record = toRecord2(sanitized.value);
   const unsafeIssuePaths = sanitized.issues.flatMap((issue) => issue.keys.map((key) => [...issue.path, key].join(".")));
   const unsafeDiagnostics = unsafeIssuePaths.length === 0 ? [] : [{ kind: "unknown-keys", message: `Ignored unknown keys in ${path}: ${unsafeIssuePaths.join(", ")}`, path, issuePaths: unsafeIssuePaths }];
   const validation = OmoConfigLayerSchema.safeParse(sanitized.value);
@@ -78156,7 +78209,7 @@ function resolveOmoProfileName(options = {}) {
   const env = options.env ?? process.env;
   return profileName(options.profile) ?? profileName(env["OMO_PROFILE"]) ?? profileName(env["OCX_PROFILE"]) ?? profileNameFromOpenCodeConfigDir(env["OPENCODE_CONFIG_DIR"]);
 }
-function toRecord2(value) {
+function toRecord3(value) {
   if (value === null || typeof value !== "object" || Array.isArray(value))
     return;
   return Object.fromEntries(Object.entries(value));
@@ -78177,13 +78230,13 @@ function harnessLayer(config, harness) {
   const legacyKeys = Object.entries(OMO_CONFIG_LEGACY_HARNESS_ALIASES).filter(([, target]) => target === canonical).map(([legacy]) => harnessBlockKey(legacy));
   let layer = {};
   for (const key of [...legacyKeys, harnessBlockKey(canonical)]) {
-    layer = mergeOmoConfigRecords(layer, toRecord2(config[key]) ?? {});
+    layer = mergeOmoConfigRecords(layer, toRecord3(config[key]) ?? {});
   }
   return layer;
 }
 function resolveOmoConfigView(options) {
-  const profiles = toRecord2(options.config["profiles"]);
-  const profile = options.profile === undefined ? undefined : toRecord2(profiles?.[options.profile]);
+  const profiles = toRecord3(options.config["profiles"]);
+  const profile = options.profile === undefined ? undefined : toRecord3(profiles?.[options.profile]);
   const diagnostics = profile === undefined && options.profile !== undefined ? [{
     kind: "profile",
     message: `Activated omo profile "${options.profile}" does not exist; using the base configuration`,
@@ -78324,9 +78377,15 @@ function loadOmoConfig(options = {}) {
   });
   const finalInput = mergeOmoConfigRecords(DEFAULT_RAW_CONFIG, resolved.config);
   const finalConfig = OmoConfigSchema.safeParse(finalInput);
+  const excludeModels = collectExcludedModels({
+    layers,
+    ...options.harness === undefined ? {} : { harness: options.harness },
+    ...resolved.profile === undefined ? {} : { profile: resolved.profile }
+  });
+  const withExcludedModels = (config) => excludeModels.length === 0 ? config : { ...config, exclude_models: [...excludeModels] };
   if (finalConfig.success) {
     return {
-      config: stripResolutionControlKeys(finalConfig.data),
+      config: withExcludedModels(stripResolutionControlKeys(finalConfig.data)),
       diagnostics: [...diagnostics, ...resolved.diagnostics],
       layers,
       ...resolved.profile === undefined ? {} : { profile: resolved.profile },
@@ -78339,7 +78398,7 @@ function loadOmoConfig(options = {}) {
   });
   if (pruned.ok) {
     return {
-      config: stripResolutionControlKeys(OmoConfigSchema.parse(pruned.config)),
+      config: withExcludedModels(stripResolutionControlKeys(OmoConfigSchema.parse(pruned.config))),
       diagnostics: [...diagnostics, ...resolved.diagnostics, ...invalidValueDiagnostics(MERGED_OMO_CONFIG_PATH, pruned.dropped)],
       layers,
       ...resolved.profile === undefined ? {} : { profile: resolved.profile },
@@ -78358,6 +78417,7 @@ var DEFAULT_RAW_CONFIG;
 var init_loader2 = __esm(() => {
   init_main();
   init_schema();
+  init_disabled_skills();
   init_layer_validation();
   init_merge();
   init_paths();
@@ -92220,7 +92280,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "5.1.41",
+    version: "5.1.42",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -99527,6 +99587,7 @@ var REQUIRED_PLUGIN_ARTIFACTS = [
   join63("extensions", "CaseFolding.txt"),
   join63("extensions", "omo-thread-client.js"),
   join63("extensions", "omo-feedback.js"),
+  join63("extensions", "omo-claim-receipt.js"),
   join63("extensions", "assets.generated.json"),
   join63("extensions", "omo-member.js"),
   join63("extensions", "memory-run-supervisor.mjs"),
@@ -108568,6 +108629,10 @@ var package_default3 = {
     "./config-migration": {
       types: "./src/config-migration/index.ts",
       import: "./src/config-migration/index.ts"
+    },
+    "./service-auth": {
+      types: "./src/cli/service-auth/index.ts",
+      import: "./src/cli/service-auth/index.ts"
     },
     "./binary-downloader": {
       types: "./src/shared/binary-downloader.ts",
