@@ -2132,7 +2132,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "5.1.42",
+    version: "5.1.43",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2370,18 +2370,18 @@ var init_package = __esm(() => {
       typescript: "^7.0.2"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "5.1.42",
-      "oh-my-opencode-darwin-x64": "5.1.42",
-      "oh-my-opencode-darwin-x64-baseline": "5.1.42",
-      "oh-my-opencode-linux-arm64": "5.1.42",
-      "oh-my-opencode-linux-arm64-musl": "5.1.42",
-      "oh-my-opencode-linux-x64": "5.1.42",
-      "oh-my-opencode-linux-x64-baseline": "5.1.42",
-      "oh-my-opencode-linux-x64-musl": "5.1.42",
-      "oh-my-opencode-linux-x64-musl-baseline": "5.1.42",
-      "oh-my-opencode-windows-arm64": "5.1.42",
-      "oh-my-opencode-windows-x64": "5.1.42",
-      "oh-my-opencode-windows-x64-baseline": "5.1.42"
+      "oh-my-opencode-darwin-arm64": "5.1.43",
+      "oh-my-opencode-darwin-x64": "5.1.43",
+      "oh-my-opencode-darwin-x64-baseline": "5.1.43",
+      "oh-my-opencode-linux-arm64": "5.1.43",
+      "oh-my-opencode-linux-arm64-musl": "5.1.43",
+      "oh-my-opencode-linux-x64": "5.1.43",
+      "oh-my-opencode-linux-x64-baseline": "5.1.43",
+      "oh-my-opencode-linux-x64-musl": "5.1.43",
+      "oh-my-opencode-linux-x64-musl-baseline": "5.1.43",
+      "oh-my-opencode-windows-arm64": "5.1.43",
+      "oh-my-opencode-windows-x64": "5.1.43",
+      "oh-my-opencode-windows-x64-baseline": "5.1.43"
     },
     overrides: {
       hono: "^4.13.8",
@@ -82448,6 +82448,8 @@ function toDiagnosticRecord(input, now) {
     timestamp: now.toISOString(),
     event: input.event,
     source: input.source,
+    ...input.entryKind === undefined ? {} : { entry_kind: input.entryKind },
+    ...input.errorCode === undefined ? {} : { error_code: input.errorCode },
     ...input.count === undefined ? {} : { count: input.count },
     ...serializeError(input.error, input.errorKind)
   };
@@ -92201,7 +92203,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "5.1.42",
+    version: "5.1.43",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -111568,24 +111570,98 @@ async function loginDevice(session, options) {
 
 // packages/omo-opencode/src/cli/service-auth/keystore.ts
 import { createHash as createHash9 } from "crypto";
+
+// packages/omo-opencode/src/cli/service-auth/secret-service-lock.ts
+import { spawn as spawn5 } from "child_process";
+var DEFAULT_COLLECTION = "/org/freedesktop/secrets/aliases/default";
+var PROBE_TIMEOUT_MS2 = 1e4;
+var parseLockedReply = (stdout) => {
+  const match = /<\s*(true|false)\s*>/.exec(stdout);
+  if (match === null)
+    return null;
+  return match[1] === "true" ? "locked" : "unlocked";
+};
+var probeSecretServiceLock = () => new Promise((resolve) => {
+  const child = spawn5("gdbus", [
+    "call",
+    "--session",
+    "--dest",
+    "org.freedesktop.secrets",
+    "--object-path",
+    DEFAULT_COLLECTION,
+    "--method",
+    "org.freedesktop.DBus.Properties.Get",
+    "org.freedesktop.Secret.Collection",
+    "Locked"
+  ], { stdio: ["ignore", "pipe", "ignore"] });
+  let stdout = "";
+  const timer = setTimeout(() => {
+    child.kill();
+    resolve("unknown");
+  }, PROBE_TIMEOUT_MS2);
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk.toString();
+  });
+  child.on("error", () => {
+    clearTimeout(timer);
+    resolve("unknown");
+  });
+  child.on("close", (code) => {
+    clearTimeout(timer);
+    resolve(code === 0 ? parseLockedReply(stdout) ?? "absent" : "absent");
+  });
+});
+
+// packages/omo-opencode/src/cli/service-auth/keystore.ts
+class KeychainLockedError extends SignInError {
+}
+var LOCKED = /-25308|errSecInteractionNotAllowed|interaction is not allowed|locked collection/i;
+var UNLOCKED_REUSE_MS = 30000;
+var fallbackNoticed = false;
+var stderrNoticeOncePerProcess = (message) => {
+  if (fallbackNoticed)
+    return;
+  fallbackNoticed = true;
+  process.stderr.write(`${message}
+`);
+};
+var isLocked = (error) => error instanceof Error && (LOCKED.test(error.message) || LOCKED.test(String(error.code ?? "")));
 function credentialId(api) {
   return createHash9("sha256").update(serviceOrigin(api)).digest("hex");
 }
-function createCredentialStore(api, secrets = typeof Bun === "undefined" ? null : Bun.secrets, platform = process.platform) {
+function createCredentialStore(api, secrets = typeof Bun === "undefined" ? null : Bun.secrets, platform = process.platform, lockProbe = probeSecretServiceLock, notice = stderrNoticeOncePerProcess) {
   if (!secrets)
     throw new SignInError("OmO sign-in needs Bun 1.4 or newer with OS credential storage. No file fallback is available.");
   const platformName = platform === "darwin" ? "macOS Keychain" : platform === "linux" ? "Linux Secret Service (libsecret and an unlocked keyring)" : platform === "win32" ? "Windows Credential Manager" : null;
   if (platformName === null)
     throw new SignInError("This platform has no supported OS credential store.");
   const key = { service: "omo-cli", name: credentialId(api) };
-  const unavailable = () => new SignInError(`Cannot access ${platformName}. Unlock or enable the OS credential store and try again. Credentials are never saved to a file.`);
+  const unavailable = (error) => isLocked(error) ? new KeychainLockedError(`${platformName} is locked. Unlock it, then try again. Credentials are never saved to a file.`) : new SignInError(`Cannot access ${platformName}. Unlock or enable the OS credential store and try again. Credentials are never saved to a file.`);
+  let unlockedUntil = 0;
+  let noticed = false;
+  const assertUsable = async () => {
+    if (platform !== "linux" || Date.now() < unlockedUntil)
+      return;
+    const lock = await lockProbe();
+    if (lock === "locked")
+      throw new KeychainLockedError(`${platformName} is locked. Unlock it, then try again. Credentials are never saved to a file.`);
+    if (lock === "unlocked") {
+      unlockedUntil = Date.now() + UNLOCKED_REUSE_MS;
+      return;
+    }
+    if (!noticed) {
+      noticed = true;
+      notice("omo: could not check whether the keyring is locked (gdbus or the Secret Service did not answer); using libsecret directly.");
+    }
+  };
   return {
     async read() {
+      await assertUsable();
       let value;
       try {
         value = await secrets.get(key);
-      } catch {
-        throw unavailable();
+      } catch (error) {
+        throw unavailable(error);
       }
       if (value === null)
         return null;
@@ -111596,17 +111672,19 @@ function createCredentialStore(api, secrets = typeof Bun === "undefined" ? null 
       }
     },
     async write(value) {
+      await assertUsable();
       try {
         await secrets.set({ ...key, value: JSON.stringify(credentialSchema.parse(value)) });
-      } catch {
-        throw unavailable();
+      } catch (error) {
+        throw unavailable(error);
       }
     },
     async clear() {
+      await assertUsable();
       try {
         await secrets.delete(key);
-      } catch {
-        throw unavailable();
+      } catch (error) {
+        throw unavailable(error);
       }
     }
   };
@@ -111950,9 +112028,11 @@ async function reapStaleLock(lockPath, staleAfterMs = DEFAULT_STALE_AFTER_MS, de
 // packages/omo-opencode/src/cli/service-auth/session.ts
 class SessionEnded extends SignInError {
   deviceRevoked;
-  constructor(message, deviceRevoked) {
+  code;
+  constructor(message, deviceRevoked, code) {
     super(message);
     this.deviceRevoked = deviceRevoked;
+    this.code = code;
   }
 }
 var DEVICE_REVOKING_REFUSALS = new Set(["account_deleted", "reauth_required"]);
@@ -111984,7 +112064,7 @@ function createSession(options) {
     } catch (error) {
       if (error instanceof ApiRefusal && error.status < 500 && ["unauthorized", "account_deleted", "reauth_required", "invalid_grant"].includes(error.code)) {
         await store.clear();
-        throw new SessionEnded(error.code === "reauth_required" ? "This session was ended because its refresh token was reused. Sign in again with omo login." : "Sign in again with omo login.", DEVICE_REVOKING_REFUSALS.has(error.code));
+        throw new SessionEnded(error.code === "reauth_required" ? "This session was ended because its refresh token was reused. Sign in again with omo login." : "Sign in again with omo login.", DEVICE_REVOKING_REFUSALS.has(error.code), error.code);
       }
       if (error instanceof RequestFailure && error.notSent || error instanceof ApiRefusal && error.status === 429 && error.code === "rate_limited") {
         await store.write(current);
@@ -112001,6 +112081,9 @@ function createSession(options) {
     },
     async save(value) {
       await locked(() => store.write(value));
+    },
+    async update(action) {
+      return locked(async () => action(await store.read()));
     },
     async logout() {
       return locked(async () => {
@@ -112365,7 +112448,7 @@ async function boulder(options) {
   return 0;
 }
 // packages/omo-opencode/src/cli/codex-ulw-loop.ts
-import { spawn as spawn5 } from "child_process";
+import { spawn as spawn6 } from "child_process";
 import { existsSync as existsSync65, readFileSync as readFileSync43, realpathSync as realpathSync11 } from "fs";
 import { homedir as homedir29 } from "os";
 var ULW_LOOP_DELEGATION_SENTINEL = "OMO_ULW_LOOP_DELEGATED";
@@ -112395,7 +112478,7 @@ async function codexUlwLoop(args) {
     return 1;
   }
   const { promise, resolve } = Promise.withResolvers();
-  const child = spawn5(command.executable, [...command.argsPrefix, ...args], {
+  const child = spawn6(command.executable, [...command.argsPrefix, ...args], {
     stdio: "inherit",
     env: { ...process.env, [ULW_LOOP_DELEGATION_SENTINEL]: "1" }
   });

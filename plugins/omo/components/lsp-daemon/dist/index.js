@@ -3158,8 +3158,8 @@ async function disposeDefaultLspManager() {
 }
 // src/daemon-client.ts
 import { connect } from "node:net";
-import { homedir as homedir3 } from "node:os";
-import { join as join8 } from "node:path";
+import { homedir as homedir4 } from "node:os";
+import { join as join9 } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 // ../lsp-core/src/request-context.ts
@@ -5601,6 +5601,321 @@ function missingDependencyAvailability(error) {
   }
 }
 
+// ../lsp-core/src/lsp/bun-command-output.ts
+import { resolve as resolve10 } from "node:path";
+var TSC_LINE = /^(.+?)\((\d+),(\d+)\): (error|warning|message) (TS\d+): (.*)$/;
+var TSC_SEVERITY = { error: 1, warning: 2, message: 3 };
+function parseBunCheckOutput(stdout, cwd) {
+  const results = [];
+  for (const line of stdout.split(/\r?\n/)) {
+    const match = TSC_LINE.exec(line);
+    if (match) {
+      const [, path, lineNumber, column, severity, code, message] = match;
+      const start = { line: Number(lineNumber) - 1, character: Number(column) - 1 };
+      results.push({
+        file: resolve10(cwd, path ?? ""),
+        diagnostic: {
+          range: { start, end: start },
+          severity: TSC_SEVERITY[severity ?? "error"] ?? 1,
+          code: code ?? "",
+          source: "bun check",
+          message: message ?? ""
+        }
+      });
+      continue;
+    }
+    const previous = results[results.length - 1];
+    if (previous !== undefined && /^\s+\S/.test(line)) {
+      previous.diagnostic.message = `${previous.diagnostic.message}
+${line.trim()}`;
+    }
+  }
+  return results;
+}
+function parseBunLintJson(stdout) {
+  let parsed;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    return;
+  }
+  if (!Array.isArray(parsed))
+    return;
+  const results = [];
+  for (const entry of parsed) {
+    if (entry === null || typeof entry !== "object")
+      continue;
+    const filePath = entry.filePath;
+    const messages = entry.messages;
+    if (typeof filePath !== "string" || !Array.isArray(messages))
+      continue;
+    for (const raw of messages) {
+      const start = { line: Math.max(0, (raw.line ?? 1) - 1), character: Math.max(0, (raw.column ?? 1) - 1) };
+      const end = {
+        line: raw.endLine === undefined ? start.line : Math.max(0, raw.endLine - 1),
+        character: raw.endColumn === undefined ? start.character : Math.max(0, raw.endColumn - 1)
+      };
+      results.push({
+        file: filePath,
+        diagnostic: {
+          range: { start, end },
+          severity: raw.severity === 2 ? 1 : 2,
+          ...raw.ruleId ? { code: raw.ruleId } : {},
+          source: "bun lint",
+          message: raw.message ?? ""
+        }
+      });
+    }
+  }
+  return results;
+}
+
+// ../lsp-core/src/lsp/bun-project-checks.ts
+import { spawn as spawn3 } from "node:child_process";
+import { existsSync as existsSync13, mkdtempSync, readFileSync as readFileSync6, rmSync as rmSync2, statSync as statSync5, writeFileSync as writeFileSync3 } from "node:fs";
+import { homedir as homedir3, tmpdir as tmpdir2 } from "node:os";
+import { dirname as dirname11, join as join8, resolve as resolve11 } from "node:path";
+var BUN_LOCKFILES = ["bun.lock", "bun.lockb", "bunfig.toml"];
+var RUNNABLE_EXTENSIONS = [".tsx", ".ts", ".jsx", ".cts", ".cjs", ".js", ".mjs", ".mts"];
+var BIN_SUFFIXES = process.platform === "win32" ? [".exe", ".bunx", ".cmd", ""] : [""];
+var PROBE_TIMEOUT_MS2 = 1e4;
+var UNFORMATTED_PROBE = `const a=1
+`;
+var probeCache = new Map;
+function findBunProjectRoot(start, home = homedir3()) {
+  const stopAt = resolve11(home);
+  let dir = resolve11(start);
+  for (;; ) {
+    if (dir === stopAt)
+      return;
+    if (BUN_LOCKFILES.some((name) => existsSync13(join8(dir, name))))
+      return dir;
+    if (packageManagerIsBun(join8(dir, "package.json")))
+      return dir;
+    if (existsSync13(join8(dir, ".git")))
+      return;
+    const parent = dirname11(dir);
+    if (parent === dir)
+      return;
+    dir = parent;
+  }
+}
+function packageManagerIsBun(packageJsonPath) {
+  const manifest = readJsonObject(packageJsonPath);
+  const packageManager = manifest?.["packageManager"];
+  return typeof packageManager === "string" && packageManager.startsWith("bun@");
+}
+function readJsonObject(path) {
+  if (!existsSync13(path))
+    return;
+  try {
+    const parsed = JSON.parse(readFileSync6(path, "utf8"));
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return;
+  }
+}
+function isFile(path) {
+  try {
+    return statSync5(path).isFile();
+  } catch {
+    return false;
+  }
+}
+function isDirectory(path) {
+  try {
+    return statSync5(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+function projectShadowsBunCommand(command, cwd) {
+  const packageJsonDir = nearestPackageJsonDir(cwd);
+  if (packageJsonDir !== undefined) {
+    const scripts = readJsonObject(join8(packageJsonDir, "package.json"))?.["scripts"];
+    if (scripts !== null && typeof scripts === "object" && typeof scripts[command] === "string") {
+      return true;
+    }
+  }
+  if (command === "check")
+    return false;
+  const base = join8(cwd, command);
+  if (isFile(base) || RUNNABLE_EXTENSIONS.some((extension) => isFile(`${base}${extension}`)))
+    return true;
+  if (isDirectory(base) && (isFile(join8(base, "package.json")) || RUNNABLE_EXTENSIONS.some((extension) => isFile(join8(base, `index${extension}`))))) {
+    return true;
+  }
+  let dir = resolve11(cwd);
+  for (;; ) {
+    if (BIN_SUFFIXES.some((suffix) => existsSync13(join8(dir, "node_modules", ".bin", `${command}${suffix}`))))
+      return true;
+    const parent = dirname11(dir);
+    if (parent === dir)
+      return false;
+    dir = parent;
+  }
+}
+function nearestPackageJsonDir(start) {
+  let dir = resolve11(start);
+  for (;; ) {
+    if (existsSync13(join8(dir, "package.json")))
+      return dir;
+    const parent = dirname11(dir);
+    if (parent === dir)
+      return;
+    dir = parent;
+  }
+}
+function binaryIdentity(bunPath) {
+  try {
+    const stats = statSync5(bunPath);
+    return `${stats.mtimeMs}:${stats.size}`;
+  } catch {
+    return "missing";
+  }
+}
+function bunHasCommand(bunPath, command, timeoutMs = PROBE_TIMEOUT_MS2) {
+  const key = `${bunPath}\x00${binaryIdentity(bunPath)}\x00${command}`;
+  const cached = probeCache.get(key);
+  if (cached !== undefined)
+    return cached;
+  const probe = probeOnce(bunPath, command, timeoutMs).then((answer) => {
+    if (answer === undefined)
+      probeCache.delete(key);
+    return answer === true;
+  });
+  probeCache.set(key, probe);
+  return probe;
+}
+async function probeOnce(bunPath, command, timeoutMs) {
+  const emptyDir = mkdtempSync(join8(tmpdir2(), "omo-bun-probe-"));
+  const timeout = AbortSignal.timeout(timeoutMs);
+  try {
+    const help = await runBunCommand(bunPath, [command, "--help"], emptyDir, timeout);
+    if (help.exitCode === null)
+      return;
+    if (help.exitCode !== 0)
+      return false;
+    if (command !== "format")
+      return true;
+    const probeFile = join8(emptyDir, "probe.ts");
+    writeFileSync3(probeFile, UNFORMATTED_PROBE);
+    const write = await runBunCommand(bunPath, ["format", "--write", "probe.ts"], emptyDir, timeout);
+    if (write.exitCode === null)
+      return;
+    return write.exitCode === 0 && readFileSync6(probeFile, "utf8") !== UNFORMATTED_PROBE;
+  } catch {
+    return;
+  } finally {
+    rmSync2(emptyDir, { recursive: true, force: true });
+  }
+}
+async function resolveBunProjectCommand(command, cwd, options = {}) {
+  if (findBunProjectRoot(cwd, options.homeDir) === undefined)
+    return;
+  if (projectShadowsBunCommand(command, cwd))
+    return;
+  const bunPath = (options.resolveBun ?? defaultResolveBun)(cwd);
+  if (!bunPath)
+    return;
+  return await bunHasCommand(bunPath, command) ? bunPath : undefined;
+}
+function defaultResolveBun(cwd) {
+  return resolveServerBinary(["bun"], cwd);
+}
+function runBunCommand(bunPath, args, cwd, signal) {
+  signal?.throwIfAborted();
+  const prepared = createSpawnCommand([bunPath, ...args]);
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn3(prepared.command, prepared.args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: prepared.shell,
+      windowsHide: true,
+      detached: process.platform !== "win32"
+    });
+    const stdout = [];
+    const stderr = [];
+    const onAbort = () => killProcessTree(child, "SIGKILL");
+    signal?.addEventListener("abort", onAbort, { once: true });
+    child.stdout?.on("data", (chunk) => stdout.push(chunk));
+    child.stderr?.on("data", (chunk) => stderr.push(chunk));
+    child.once("error", (error) => {
+      signal?.removeEventListener("abort", onAbort);
+      reject(error);
+    });
+    child.once("close", (exitCode) => {
+      signal?.removeEventListener("abort", onAbort);
+      if (signal?.aborted) {
+        reject(signal.reason);
+        return;
+      }
+      resolvePromise({
+        exitCode,
+        stdout: Buffer.concat(stdout).toString("utf8"),
+        stderr: Buffer.concat(stderr).toString("utf8")
+      });
+    });
+  });
+}
+
+// ../lsp-core/src/tools/bun-directory-diagnostics.ts
+var TYPESCRIPT_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
+async function runBunDirectoryDiagnostics(absDir, extension, severity, signal, options = {}) {
+  if (!TYPESCRIPT_EXTENSIONS.has(extension))
+    return;
+  const checkBun = await resolveBunProjectCommand("check", absDir, options);
+  if (checkBun === undefined)
+    return;
+  let typecheck;
+  try {
+    const run = await runBunCommand(checkBun, ["check", "--no-pretty", "."], absDir, signal);
+    typecheck = parseBunCheckOutput(run.stdout, absDir);
+    const failedWithoutDiagnostics = run.exitCode === 1 && typecheck.length === 0;
+    if (run.exitCode !== 0 && run.exitCode !== 1 || failedWithoutDiagnostics)
+      return;
+  } catch (error) {
+    if (signal?.aborted)
+      throw error;
+    return;
+  }
+  const header = [`Directory: ${absDir}`, "Typecheck: bun check (files in this directory and everything they import)"];
+  const projectCommands = ["bun check"];
+  const collected = [...typecheck];
+  const lintBun = await resolveBunProjectCommand("lint", absDir, options);
+  if (lintBun !== undefined) {
+    const lint = await runBunLint(lintBun, absDir, signal);
+    header.push(lint.status);
+    projectCommands.push("bun lint");
+    collected.push(...lint.diagnostics);
+  }
+  const diagnostics = collected.filter(({ diagnostic }) => filterDiagnosticsBySeverity([diagnostic], severity).length > 0);
+  const lines = [...header, `Total diagnostics: ${diagnostics.length}`];
+  const shown = diagnostics.slice(0, DEFAULT_MAX_DIAGNOSTICS);
+  if (shown.length > 0) {
+    lines.push("", ...shown.map(({ file, diagnostic }) => `${file}: ${formatDiagnostic(diagnostic)}`));
+    if (diagnostics.length > shown.length) {
+      lines.push("", `... (${diagnostics.length - shown.length} more diagnostics not shown)`);
+    }
+  }
+  return { output: lines.join(`
+`), diagnostics, projectCommands };
+}
+async function runBunLint(bunPath, absDir, signal) {
+  try {
+    const run = await runBunCommand(bunPath, ["lint", "-f", "json", "."], absDir, signal);
+    const diagnostics = run.exitCode === 0 || run.exitCode === 1 ? parseBunLintJson(run.stdout) : undefined;
+    if (diagnostics !== undefined)
+      return { status: "Lint: bun lint", diagnostics };
+    const reason = run.stderr.trim().split(/\r?\n/)[0] ?? "";
+    return { status: `Lint: bun lint could not lint (exit ${run.exitCode ?? "signal"})${reason ? `: ${reason}` : ""}`, diagnostics: [] };
+  } catch (error) {
+    if (signal?.aborted)
+      throw error;
+    return { status: `Lint: bun lint could not run: ${error instanceof Error ? error.message : String(error)}`, diagnostics: [] };
+  }
+}
+
 // ../lsp-core/src/tools/parameters.ts
 function isRecord7(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -5655,7 +5970,7 @@ function asDiagnosticArray(result) {
     return result;
   return result.items ?? [];
 }
-async function executeLspDiagnostics(params, signal) {
+async function executeLspDiagnostics(params, signal, bunOptions = {}) {
   const filePath = requireString(params, "filePath");
   const severity = severityFilter(params);
   try {
@@ -5675,6 +5990,19 @@ async function executeLspDiagnostics(params, signal) {
           errorKind: "no_files"
         };
         return text(message, details);
+      }
+      const bun = await runBunDirectoryDiagnostics(absPath, extension, severity, signal, bunOptions);
+      if (bun !== undefined) {
+        const details = {
+          filePath,
+          severity,
+          mode: "directory",
+          diagnostics: [...bun.diagnostics],
+          totalDiagnostics: bun.diagnostics.length,
+          truncated: bun.diagnostics.length > DEFAULT_MAX_DIAGNOSTICS,
+          projectCommands: [...bun.projectCommands]
+        };
+        return text(bun.output, details);
       }
       const output = await aggregateDiagnosticsForDirectory(absPath, extension, severity, undefined, signal === undefined ? {} : { signal });
       const details = {
@@ -5736,7 +6064,7 @@ async function executeLspDiagnostics(params, signal) {
   }
 }
 // ../lsp-core/src/lsp/format-document.ts
-import { readFileSync as readFileSync6, renameSync as renameSync3, unlinkSync as unlinkSync2, writeFileSync as writeFileSync3 } from "node:fs";
+import { readFileSync as readFileSync7, renameSync as renameSync3, unlinkSync as unlinkSync2, writeFileSync as writeFileSync4 } from "node:fs";
 var DEFAULT_FORMATTING_OPTIONS = {
   tabSize: 4,
   insertSpaces: false,
@@ -5751,7 +6079,7 @@ async function formatDocumentWithClient(client, filePath, options = {}) {
     return { status: "unavailable", reason: "capability_not_advertised" };
   if (edits.length === 0)
     return UNCHANGED;
-  const before = readFileSync6(filePath, "utf-8");
+  const before = readFileSync7(filePath, "utf-8");
   const normalized = normalizeTextEdits(before, edits, 0);
   if (normalized.text === before)
     return UNCHANGED;
@@ -5774,7 +6102,7 @@ function lineDelta(edits) {
 }
 function writeAtomically(filePath, content) {
   const tempPath = `${filePath}.omo-format.tmp`;
-  writeFileSync3(tempPath, content, "utf-8");
+  writeFileSync4(tempPath, content, "utf-8");
   try {
     renameSync3(tempPath, filePath);
   } catch (error) {
@@ -6079,7 +6407,7 @@ var LSP_MCP_TOOLS = [
     name: "diagnostics",
     aliases: ["lsp_diagnostics"],
     title: "LSP Diagnostics",
-    description: "Get errors, warnings, and hints for a source file or directory.",
+    description: "Get errors, warnings, and hints for a source file or directory. In a Bun project, a TypeScript directory is typechecked with `bun check`, plus `bun lint` when the installed Bun has it.",
     inputSchema: objectSchema({
       filePath: { type: "string", description: "File or directory path to check." },
       severity: {
@@ -6406,12 +6734,12 @@ function callFormatViaDaemon(filePath, options) {
 }
 function currentRequestContext(env = process.env) {
   const cwd = process.cwd();
-  const home = env["HOME"] ?? homedir3();
+  const home = env["HOME"] ?? homedir4();
   return parseLspRequestContext({
     cwd,
-    projectConfigPaths: [join8(cwd, ".codex", "lsp-client.json")],
-    userConfigPath: join8(home, ".codex", "lsp-client.json"),
-    installDecisionsPath: join8(home, ".codex", "lsp-install-decisions.json"),
+    projectConfigPaths: [join9(cwd, ".codex", "lsp-client.json")],
+    userConfigPath: join9(home, ".codex", "lsp-client.json"),
+    installDecisionsPath: join9(home, ".codex", "lsp-install-decisions.json"),
     capabilities: { installDecisionTool: true }
   });
 }
@@ -6543,8 +6871,8 @@ function isRetryableTool(name) {
   return name !== "rename" && name !== "lsp_rename";
 }
 // src/proxy.ts
-import { existsSync as existsSync13, realpathSync as realpathSync6 } from "node:fs";
-import { basename as basename4, delimiter as delimiter4, dirname as dirname11, isAbsolute as isAbsolute6 } from "node:path";
+import { existsSync as existsSync14, realpathSync as realpathSync6 } from "node:fs";
+import { basename as basename4, delimiter as delimiter4, dirname as dirname12, isAbsolute as isAbsolute6 } from "node:path";
 var DEFAULT_STARTUP_TIMEOUT_MS = 1e4;
 async function runMcpStdioProxy(options = {}) {
   const input = options.input ?? process.stdin;
@@ -6667,18 +6995,18 @@ function canonicalizePathList(value) {
   return value.split(delimiter4).map((entry) => canonicalizePath(entry) ?? entry).join(delimiter4);
 }
 function canonicalizePath(value) {
-  if (value === undefined || !isAbsolute6(value) || !existsSync13(value))
+  if (value === undefined || !isAbsolute6(value) || !existsSync14(value))
     return value;
   return realpathSync6(value);
 }
 function projectRootFromOpenCodeConfigPath(path) {
   if (basename4(path) !== "lsp.json" && basename4(path) !== "lsp-client.json")
     return;
-  const configDir = dirname11(path);
+  const configDir = dirname12(path);
   const configDirName = basename4(configDir);
   if (configDirName !== ".opencode" && configDirName !== ".omo")
     return;
-  return dirname11(configDir);
+  return dirname12(configDir);
 }
 export {
   InvalidDaemonDirectoryError,

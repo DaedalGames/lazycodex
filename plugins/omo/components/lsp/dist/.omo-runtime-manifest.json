@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "5.1.42",
-  "inputDigest": "sha256:67783401245cfd4a937dfd08ba04aa96bff6ea9816e0f6caeca4d98722b2baec",
+  "version": "5.1.43",
+  "inputDigest": "sha256:a83a1a725be4b46b073412ce13e9872277ac52be27fc4e32b8dd2f21354a937f",
   "outputs": [
     {
       "path": "cli.d.ts",
@@ -9,7 +9,7 @@
     },
     {
       "path": "cli.js",
-      "sha256": "0775d5a52628cc6aeed25d5ff10fdf42f236b8058428d5120f278ce5157ad76a"
+      "sha256": "a2b1db4d57a57bb19cad2ec6ba19694dcc0e0231903c010c0e845821af6dfeae"
     },
     {
       "path": "codex-hook-cli.d.ts",
