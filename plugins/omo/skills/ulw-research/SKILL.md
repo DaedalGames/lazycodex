@@ -23,7 +23,7 @@ Codex exposes ONE of two subagent tool surfaces per session; check your own tool
 
 When translating `load_skills=[...]`, include the requested skill names in the spawned agent's `message`. If a code block below conflicts with this section, this section wins.
 
-Omit optional keys you do not set. Never send `items: []`, `message: ""`, `model: ""`, `reasoning_effort: ""`, or `service_tier: ""` — Codex rejects them (`Items can't be empty`, `reasoning_effort must not be empty`).
+Omit optional keys you do not set. Never send `items: []`, `message: ""`, `model: ""`, `reasoning_effort: ""`, or `service_tier: ""`. Codex rejects them (`Items can't be empty`, `reasoning_effort must not be empty`).
 
 For work likely to exceed one wait cycle, require the child to send `WORKING: <task> - <current phase>` before long passes and `BLOCKED: <reason>` only when progress stops. A `multi_agent_v1.wait_agent` timeout only means no new mailbox update arrived; back off between waits (double the timeout up to ~5 minutes) instead of spinning short cycles. Treat a running child as alive. Fallback only when the child is completed without the deliverable, ack-only after followup, explicitly `BLOCKED:`, or no longer running.
 
@@ -348,7 +348,7 @@ Assembly worker — `task(category="deep-low", load_skills=["frontend", "visual-
 
 ### The delivery gates — every gate for the QA tier must PASS, in order
 
-Nothing reaches the user until the gates pass. Record each result with `node "$SKILL_DIR/scripts/report-tools.mjs" outcome gate <static|layout|visual|proofread> <pass|fail|not_run> --session-dir "$SESSION_DIR"`; a gate this harness does not provide is recorded `not_run`. A chat or post answer (light tier) runs the static gates and one render; every paginated or web deliverable runs them all (the reference's sections 3 and 7).
+Nothing reaches the user until the gates pass. Record each result with `node "$SKILL_DIR/scripts/report-tools.mjs" outcome gate <static|fidelity|layout|visual|proofread> <pass|fail|not_run> --session-dir "$SESSION_DIR"`; `fidelity` is recorded not_run until the fidelity verifier ships in this edition; a gate this harness does not provide is recorded `not_run`. A chat or post answer (light tier) runs the static gates and one render; every paginated or web deliverable runs them all (the reference's sections 3 and 7).
 
 1. **Static gates (always, before anyone looks at pixels).** `node "$SKILL_DIR/scripts/report-tools.mjs" check "$SESSION_DIR/report.html" --design-spec "$SESSION_DIR/design-spec.md" > "$SESSION_DIR/defects.json"`: keep-all, palette tokens, emoji, em dashes, heading length, unsourced numbers, figure containers, chart text, a report with no visual, images without alt text, gothic-only fonts, citations, the closing and sources sections, broken assets. Codes and fixes: [references/report-gates.md](references/report-gates.md).
 2. **Layout gates.** Print the probe with `node "$SKILL_DIR/scripts/report-tools.mjs" layout-probe --json`, evaluate its `source` in the rendered page through the `browser` skill's owned headless engine, save the result as `$SESSION_DIR/boxes.json`, and re-run `check` with `--layout "$SESSION_DIR/boxes.json"` (overflow, clipped text, distorted images, overlapping siblings).
