@@ -2133,7 +2133,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "5.1.46",
+    version: "5.1.47",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2379,18 +2379,18 @@ var init_package = __esm(() => {
       typescript: "^7.0.2"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "5.1.46",
-      "oh-my-opencode-darwin-x64": "5.1.46",
-      "oh-my-opencode-darwin-x64-baseline": "5.1.46",
-      "oh-my-opencode-linux-arm64": "5.1.46",
-      "oh-my-opencode-linux-arm64-musl": "5.1.46",
-      "oh-my-opencode-linux-x64": "5.1.46",
-      "oh-my-opencode-linux-x64-baseline": "5.1.46",
-      "oh-my-opencode-linux-x64-musl": "5.1.46",
-      "oh-my-opencode-linux-x64-musl-baseline": "5.1.46",
-      "oh-my-opencode-windows-arm64": "5.1.46",
-      "oh-my-opencode-windows-x64": "5.1.46",
-      "oh-my-opencode-windows-x64-baseline": "5.1.46"
+      "oh-my-opencode-darwin-arm64": "5.1.47",
+      "oh-my-opencode-darwin-x64": "5.1.47",
+      "oh-my-opencode-darwin-x64-baseline": "5.1.47",
+      "oh-my-opencode-linux-arm64": "5.1.47",
+      "oh-my-opencode-linux-arm64-musl": "5.1.47",
+      "oh-my-opencode-linux-x64": "5.1.47",
+      "oh-my-opencode-linux-x64-baseline": "5.1.47",
+      "oh-my-opencode-linux-x64-musl": "5.1.47",
+      "oh-my-opencode-linux-x64-musl-baseline": "5.1.47",
+      "oh-my-opencode-windows-arm64": "5.1.47",
+      "oh-my-opencode-windows-x64": "5.1.47",
+      "oh-my-opencode-windows-x64-baseline": "5.1.47"
     },
     overrides: {
       hono: "^4.13.8",
@@ -7164,7 +7164,7 @@ function resolveStdio(options) {
   return [options.stdin ?? "ignore", options.stdout ?? "pipe", options.stderr ?? "inherit"];
 }
 function createBunSpawnOptions(options) {
-  return { ...options, windowsHide: true };
+  return { ...options, env: options.env ?? process.env, windowsHide: true };
 }
 function createNodeSpawnOptions(options, platform = process.platform) {
   const nodeOptions = {
@@ -10185,6 +10185,10 @@ function transformModelForProviderUsingAnthropicBehavior(provider, model) {
       return "k3";
     if (model === "kimi-k3-256k")
       return "k3-256k";
+    if (model === "kimi-k3.1-pro")
+      return "k3.1-pro";
+    if (model === "kimi-k3.1-pro-highspeed")
+      return "k3.1-pro-highspeed";
   }
   return model;
 }
@@ -92460,7 +92464,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "5.1.46",
+    version: "5.1.47",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -94033,8 +94037,7 @@ function windowsNodeDiscoveryLines() {
     '  for /f "tokens=* delims= " %%N in ("!OMO_NODE_BINARY!") do set "OMO_NODE_BINARY=%%N"',
     `  if "!OMO_NODE_BINARY:~0,1!"=="'" set "OMO_NODE_BINARY=!OMO_NODE_BINARY:~1!"`,
     `  if "!OMO_NODE_BINARY:~-1!"=="'" set "OMO_NODE_BINARY=!OMO_NODE_BINARY:~0,-1!"`,
-    '  if "!OMO_NODE_BINARY:~0,1!"=="^"" set "OMO_NODE_BINARY=!OMO_NODE_BINARY:~1!"',
-    '  if "!OMO_NODE_BINARY:~-1!"=="^"" set "OMO_NODE_BINARY=!OMO_NODE_BINARY:~0,-1!"',
+    '  set "OMO_NODE_BINARY=!OMO_NODE_BINARY:"=!"',
     '  if defined OMO_NODE_BINARY if not exist "!OMO_NODE_BINARY!" set "OMO_NODE_BINARY="',
     ")",
     'if not defined OMO_NODE_BINARY where node >nul 2>nul && set "OMO_NODE_BINARY=node"'
@@ -112144,6 +112147,8 @@ class CredentialStoreError extends SignInError {
 
 class KeychainLockedError extends CredentialStoreError {
 }
+class InvalidCredentialState extends SignInError {
+}
 var LOCKED = /-25308|errSecInteractionNotAllowed|interaction is not allowed|locked collection/i;
 var UNLOCKED_REUSE_MS = 30000;
 var fallbackNoticed = false;
@@ -112159,12 +112164,15 @@ function credentialId(api) {
   return createHash10("sha256").update(serviceOrigin(api)).digest("hex");
 }
 function createCredentialStore(api, secrets = typeof Bun === "undefined" ? null : Bun.secrets, platform = process.platform, lockProbe = probeSecretServiceLock, notice = stderrNoticeOncePerProcess) {
+  return createSealedStore(api, "omo-cli", credentialSchema, secrets, platform, lockProbe, notice);
+}
+function createSealedStore(api, namespace, schema, secrets = typeof Bun === "undefined" ? null : Bun.secrets, platform = process.platform, lockProbe = probeSecretServiceLock, notice = stderrNoticeOncePerProcess) {
   if (!secrets)
     throw new SignInError("OmO sign-in needs Bun 1.4 or newer with OS credential storage. No file fallback is available.");
   const platformName = platform === "darwin" ? "macOS Keychain" : platform === "linux" ? "Linux Secret Service (libsecret and an unlocked keyring)" : platform === "win32" ? "Windows Credential Manager" : null;
   if (platformName === null)
     throw new SignInError("This platform has no supported OS credential store.");
-  const key = { service: "omo-cli", name: credentialId(api) };
+  const key = { service: namespace, name: credentialId(api) };
   const unavailable = (error) => isLocked(error) ? new KeychainLockedError(`${platformName} is locked. Unlock it, then try again. Credentials are never saved to a file.`) : new CredentialStoreError(`Cannot access ${platformName}. Unlock or enable the OS credential store and try again. Credentials are never saved to a file.`);
   let unlockedUntil = 0;
   let noticed = false;
@@ -112195,15 +112203,15 @@ function createCredentialStore(api, secrets = typeof Bun === "undefined" ? null 
       if (value === null)
         return null;
       try {
-        return credentialSchema.parse(JSON.parse(value));
+        return schema.parse(JSON.parse(value));
       } catch {
-        throw new SignInError("Stored sign-in data is invalid. Run omo logout, then omo login.");
+        throw new InvalidCredentialState("Stored sign-in data is invalid. Run omo logout, then omo login.");
       }
     },
     async write(value) {
       await assertUsable();
       try {
-        await secrets.set({ ...key, value: JSON.stringify(credentialSchema.parse(value)) });
+        await secrets.set({ ...key, value: JSON.stringify(schema.parse(value)) });
       } catch (error) {
         throw unavailable(error);
       }
