@@ -6,6 +6,16 @@
 
 export const SCHEMA_VERSION = 1
 
+/** The severity vocabulary in rank order; every DEFECT_CODES entry uses one of these. */
+export const SEVERITIES = Object.freeze(["blocker", "major", "minor"])
+
+/** Defect counts per severity, then total. */
+export function countDefects(defects) {
+	const counts = Object.fromEntries(SEVERITIES.map((severity) => [severity, 0]))
+	for (const defect of defects) counts[defect.severity] += 1
+	return { ...counts, total: defects.length }
+}
+
 function deepFreeze(value) {
 	if (value === null || typeof value !== "object") return value
 	for (const key of Object.keys(value)) deepFreeze(value[key])
@@ -48,7 +58,7 @@ export const DEFECT_CODES = deepFreeze({
 	pointer_label_mismatch: { severity: "blocker", integrity: true, hint: "The placeholder's label is not the row's label; check the id, then the label." },
 	quote_anchor_unresolved: { severity: "blocker", integrity: true, hint: "A from or to anchor is missing or occurs more than once in the quote; pick unique anchor words." },
 	unit_duplicated: { severity: "blocker", integrity: true, hint: "The unit after the placeholder repeats the row's unit; use :value or remove the unit." },
-	polish_diff_fail: { severity: "blocker", integrity: true, hint: "The polish pass changed numbers, tickers, or table rows; revert to the pre-polish artifact and apply the language fixes only." },
+	polish_diff_fail: { severity: "blocker", integrity: true, hint: "The polish pass changed numbers, tickers, table rows, claim ids, markup, or hidden content; revert to the pre-polish artifact and apply the language fixes only." },
 	fidelity_interview_incomplete: { severity: "blocker", integrity: true, hint: "A fidelity field is pending or missing in brief.md; answer the open question or record its default, then rerun." },
 	derived_not_allowed: { severity: "blocker", integrity: true, hint: "The brief allows no derived or assumed numbers; cite a source row directly or change the brief with the requester." },
 	source_outside_floor: { severity: "blocker", integrity: true, hint: "The row's source is outside the source floor the brief records; use a source the brief allows or remove the fact." },
@@ -57,7 +67,8 @@ export const DEFECT_CODES = deepFreeze({
 	quote_unbound: { severity: "blocker", integrity: true, hint: "A direct quotation has no ledger quote row; register it with fact quote and insert it through its placeholder." },
 	edition_unverified: { severity: "blocker", integrity: true, hint: "The delivered file has no matching fact verify record; run fact verify on that edition and record it with --verified-by." },
 	untraceable_number: { severity: "major", integrity: false, hint: "Replace the typed number with a {{F<n>}} placeholder backed by a ledger row, or register it as assumed with a rationale." },
-	unsupported_verification: { severity: "major", integrity: false, hint: "The sentence claims a tool check that no recorded command output backs; link the recorded output row or remove the claim." },
+	unsupported_verification: { severity: "major", integrity: false, hint: "A sentence marked verified (data-claim-kind=\"verified\") cites a row that is not recorded command output; cite the recorded output row or drop the verified mark." },
+	claim_kind_mismatch: { severity: "major", integrity: false, hint: "An element marked with a claim kind (data-claim-kind) cites a row that kind does not accept, or the kind is unknown; cite a row of that kind or fix the mark (references/fidelity-claim-kinds.md)." },
 	conflicting_readings: { severity: "major", integrity: false, hint: "Two ledger rows with different periods or qualifiers are cited as one fact; split the sentence or retire one row." },
 	hedge_dropped: { severity: "major", integrity: false, hint: "Restore the qualifier the source uses (estimated, about, not yet)." },
 	direction_flipped: { severity: "major", integrity: false, hint: "The source states the opposite direction; rewrite from the quote." },
@@ -65,7 +76,8 @@ export const DEFECT_CODES = deepFreeze({
 	qualifier_dropped: { severity: "major", integrity: false, hint: "The source bounds this value (up to, at least, about); restore the qualifier or use :q." },
 	unbound_sentence: { severity: "major", integrity: false, hint: "Bind the sentence to a fact, a quote, a citation, or a claim-graph node with data-claim." },
 	meaning_drift_confirmed: { severity: "major", integrity: false, hint: "Two independent readers found the same drift; rewrite from the quote or dispute with a reason." },
-	polish_edit_rejected: { severity: "major", integrity: false, hint: "The edit changed a number, a hedge, a qualifier, a link, or a claim id; re-propose the language fix only." },
+	meaning_unverified: { severity: "major", integrity: false, hint: "No meaning reader judged this pair, or no strong reader judged a force_strong pair; run the missing reader on pairs.json and rerun fact meaning-check." },
+	polish_edit_rejected: { severity: "major", integrity: false, hint: "The edit changed a number, a hedge, a qualifier, a link, or a claim id, or contained <, > or &; re-propose the language fix only, narrowed to the words around any entity or tag." },
 	polish_hedging_decreased: { severity: "major", integrity: false, hint: "The polish pass removed qualifiers; restore them." },
 	polish_text_churn: { severity: "major", integrity: false, hint: "More than half the text changed during polish; the pass composed instead of proofreading." },
 	snapshot_mismatch: { severity: "major", integrity: false, hint: "The operands come from different collection windows; use rows from one window or state the windows separately." },
@@ -73,6 +85,7 @@ export const DEFECT_CODES = deepFreeze({
 	quote_stale_version: { severity: "major", integrity: false, hint: "The quoted source revision differs from the revision the report targets; re-snapshot the target revision or date the quote." },
 	quote_fuzzy_match: { severity: "minor", integrity: false, hint: "The source text is OCR-noisy; confirm the snapshot and prefer the raw document." },
 	name_outside_quote: { severity: "minor", integrity: false, hint: "A name in the sentence is not in the cited quote; add the source or remove the name." },
+	verification_claim_unmarked: { severity: "minor", integrity: false, hint: "The sentence reads as a check we ran but carries no verified mark; mark it {{V:F<n>:label}} on a recorded command-output row, or reword it." },
 	scope_widened_warn: { severity: "minor", integrity: false, hint: "The sentence uses a broader scope word than the quote; confirm the scope or narrow it." },
 	particle_unverified: { severity: "minor", integrity: false, hint: "The particle after this value could not be checked; read it aloud and fix it by hand if wrong." },
 	fallback_without_entity: { severity: "minor", integrity: false, hint: "The replacement quote has no entity for attribution; set one on the row." },
@@ -87,10 +100,10 @@ export const FIDELITY_CODES = Object.freeze([
 	"unresolved_placeholder", "value_mismatch", "unit_mismatch", "quote_not_verbatim", "claim_status_invalid",
 	"incompatible_operands", "pointer_label_mismatch", "quote_anchor_unresolved", "unit_duplicated", "polish_diff_fail",
 	"fidelity_interview_incomplete", "derived_not_allowed", "source_outside_floor", "snapshot_hash_mismatch",
-	"chart_value_untraceable", "quote_unbound", "edition_unverified", "untraceable_number", "unsupported_verification",
+	"chart_value_untraceable", "quote_unbound", "edition_unverified", "untraceable_number", "unsupported_verification", "claim_kind_mismatch",
 	"conflicting_readings", "hedge_dropped", "direction_flipped", "causality_added", "qualifier_dropped", "unbound_sentence",
-	"meaning_drift_confirmed", "polish_edit_rejected", "polish_hedging_decreased", "polish_text_churn", "snapshot_mismatch",
-	"join_integrity_fail", "quote_stale_version", "quote_fuzzy_match", "name_outside_quote", "scope_widened_warn",
+	"meaning_drift_confirmed", "meaning_unverified", "polish_edit_rejected", "polish_hedging_decreased", "polish_text_churn", "snapshot_mismatch",
+	"join_integrity_fail", "quote_stale_version", "quote_fuzzy_match", "name_outside_quote", "verification_claim_unmarked", "scope_widened_warn",
 	"particle_unverified", "fallback_without_entity", "meaning_drift_warn", "polish_edit_unlocated", "polish_link_changed",
 	"polish_name_changed",
 ])
@@ -184,6 +197,14 @@ export function validateOutcomeManifest(manifest) {
 	if (isObject(manifest.gates)) {
 		for (const gate of GATE_NAMES) check(errors, GATE_STATUSES.includes(manifest.gates[gate]), `gates.${gate} must be one of ${GATE_STATUSES.join(", ")}`)
 	} else errors.push("gates must be an object")
+	if (manifest.gateHistory !== undefined) {
+		if (!Array.isArray(manifest.gateHistory)) errors.push("gateHistory must be an array")
+		else for (const entry of manifest.gateHistory) {
+			check(errors, isObject(entry) && GATE_NAMES.includes(entry.gate) && GATE_STATUSES.includes(entry.status)
+				&& typeof entry.at === "string" && ISO_DATE.test(entry.at)
+				&& (entry.reason === undefined || typeof entry.reason === "string"), "gateHistory entries must have a known gate, status, timestamp, and optional reason")
+		}
+	}
 	if (Array.isArray(manifest.residualDefects)) manifest.residualDefects.forEach((defect, index) => validateDefect(defect, `residualDefects[${index}]`, errors))
 	else errors.push("residualDefects must be an array")
 	check(errors, manifest.repair === null || isObject(manifest.repair), "repair must be null or an object")

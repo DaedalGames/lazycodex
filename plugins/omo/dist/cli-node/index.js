@@ -2133,7 +2133,7 @@ var package_default;
 var init_package = __esm(() => {
   package_default = {
     name: "oh-my-opencode",
-    version: "5.1.45",
+    version: "5.1.46",
     description: "The Best AI Agent Harness - Batteries-Included OpenCode Plugin with Multi-Model Orchestration, Parallel Background Agents, and Crafted LSP/AST Tools",
     main: "./dist/index.js",
     types: "dist/index.d.ts",
@@ -2379,18 +2379,18 @@ var init_package = __esm(() => {
       typescript: "^7.0.2"
     },
     optionalDependencies: {
-      "oh-my-opencode-darwin-arm64": "5.1.45",
-      "oh-my-opencode-darwin-x64": "5.1.45",
-      "oh-my-opencode-darwin-x64-baseline": "5.1.45",
-      "oh-my-opencode-linux-arm64": "5.1.45",
-      "oh-my-opencode-linux-arm64-musl": "5.1.45",
-      "oh-my-opencode-linux-x64": "5.1.45",
-      "oh-my-opencode-linux-x64-baseline": "5.1.45",
-      "oh-my-opencode-linux-x64-musl": "5.1.45",
-      "oh-my-opencode-linux-x64-musl-baseline": "5.1.45",
-      "oh-my-opencode-windows-arm64": "5.1.45",
-      "oh-my-opencode-windows-x64": "5.1.45",
-      "oh-my-opencode-windows-x64-baseline": "5.1.45"
+      "oh-my-opencode-darwin-arm64": "5.1.46",
+      "oh-my-opencode-darwin-x64": "5.1.46",
+      "oh-my-opencode-darwin-x64-baseline": "5.1.46",
+      "oh-my-opencode-linux-arm64": "5.1.46",
+      "oh-my-opencode-linux-arm64-musl": "5.1.46",
+      "oh-my-opencode-linux-x64": "5.1.46",
+      "oh-my-opencode-linux-x64-baseline": "5.1.46",
+      "oh-my-opencode-linux-x64-musl": "5.1.46",
+      "oh-my-opencode-linux-x64-musl-baseline": "5.1.46",
+      "oh-my-opencode-windows-arm64": "5.1.46",
+      "oh-my-opencode-windows-x64": "5.1.46",
+      "oh-my-opencode-windows-x64-baseline": "5.1.46"
     },
     overrides: {
       hono: "^4.13.8",
@@ -76982,6 +76982,7 @@ var init_memory = __esm(() => {
     merge: _enum(["auto", "integration"]).default("auto"),
     category: string2().min(1).default("quick"),
     timeout_minutes: number2().int().positive().default(15),
+    max_concurrent_runs: number2().int().positive().default(1),
     sandbox: _enum(["auto", "required", "off"]).default("auto")
   }).strict();
   OmoMemorySyncSchema = object({
@@ -77053,6 +77054,7 @@ var init_memory = __esm(() => {
     merge: _enum(["auto", "integration"]).optional(),
     category: string2().min(1).optional(),
     timeout_minutes: number2().int().positive().optional(),
+    max_concurrent_runs: number2().int().positive().optional(),
     sandbox: _enum(["auto", "required", "off"]).optional()
   }).strict();
   OmoMemorySyncLayerSchema = object({
@@ -77117,7 +77119,7 @@ var init_memory = __esm(() => {
   OmoMemoryAgentOverridesSchema = object({
     enabled: boolean2().optional(),
     agent: string2().min(1).optional(),
-    reflection: OmoMemoryReflectionLayerSchema.optional(),
+    reflection: OmoMemoryReflectionLayerSchema.omit({ max_concurrent_runs: true }).optional(),
     nudge: OmoMemoryNudgeLayerSchema.optional(),
     facts: OmoMemoryFactsLayerSchema.optional(),
     dream: OmoMemoryDreamLayerSchema.optional(),
@@ -77142,6 +77144,7 @@ var init_memory = __esm(() => {
       merge: "auto",
       category: "quick",
       timeout_minutes: 15,
+      max_concurrent_runs: 1,
       sandbox: "auto"
     }),
     nudge: OmoMemoryNudgeSchema.default({ enabled: true, every_user_turns: 10 }),
@@ -77516,13 +77519,6 @@ var init_format_on_mutation = __esm(() => {
   }).strict();
 });
 
-// packages/omo-config-core/src/schema/dori.ts
-var OmoDoriSectionSchema;
-var init_dori = __esm(() => {
-  init_zod();
-  OmoDoriSectionSchema = record(string2(), unknown()).describe("Chat-surface dori settings, owned and validated by a separately installed dori package. omo accepts the key and never reads it.");
-});
-
 // packages/omo-config-core/src/schema/provenance.ts
 var OmoProvenanceSettingsSchema;
 var init_provenance = __esm(() => {
@@ -77552,7 +77548,6 @@ var init_config = __esm(() => {
   init_team();
   init_telemetry();
   init_format_on_mutation();
-  init_dori();
   init_provenance();
   OmoOpenCodeHarnessConfigSchema = record(string2(), unknown());
   OmoDisabledSkillsSchema = array(string2());
@@ -77560,7 +77555,6 @@ var init_config = __esm(() => {
   OmoTypedHarnessConfigSchema = object({
     provenance: OmoProvenanceSettingsSchema.optional(),
     formatOnMutation: OmoFormatOnMutationLayerSchema.optional(),
-    dori: OmoDoriSectionSchema.optional(),
     categories: OmoCategoriesConfigSchema.optional(),
     agents: OmoAgentsConfigSchema.optional(),
     git_master: OmoGitMasterSettingsLayerSchema.optional(),
@@ -77579,7 +77573,6 @@ var init_config = __esm(() => {
   OmoConfigProfileSchema = object({
     provenance: OmoProvenanceSettingsSchema.optional(),
     formatOnMutation: OmoFormatOnMutationLayerSchema.optional(),
-    dori: OmoDoriSectionSchema.optional(),
     categories: OmoCategoriesConfigSchema.optional(),
     agents: OmoAgentsConfigSchema.optional(),
     git_master: OmoGitMasterSettingsLayerSchema.optional(),
@@ -77602,7 +77595,6 @@ var init_config = __esm(() => {
   OmoConfigSchema = object({
     provenance: OmoProvenanceSettingsSchema.optional(),
     formatOnMutation: OmoFormatOnMutationSchema.optional(),
-    dori: OmoDoriSectionSchema.optional(),
     $schema: string2().optional(),
     categories: OmoCategoriesConfigSchema.optional(),
     agents: OmoAgentsConfigSchema.optional(),
@@ -77629,7 +77621,6 @@ var init_config = __esm(() => {
   OmoConfigLayerSchema = object({
     provenance: OmoProvenanceSettingsSchema.optional(),
     formatOnMutation: OmoFormatOnMutationLayerSchema.optional(),
-    dori: OmoDoriSectionSchema.optional(),
     $schema: string2().optional(),
     categories: OmoCategoriesConfigSchema.optional(),
     agents: OmoAgentsConfigSchema.optional(),
@@ -77771,54 +77762,6 @@ var init_legacy_harness_names = __esm(() => {
   init_harness();
 });
 
-// packages/omo-config-core/src/schema/legacy-dori-section.ts
-function isRecord11(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-function migrateLegacyDoriSection(document) {
-  if (!isRecord11(document))
-    return { document: {}, diagnostics: [] };
-  const diagnostics = [];
-  const rename = (container, path) => {
-    const result = { ...container };
-    if (Object.hasOwn(container, "gateway")) {
-      if (Object.hasOwn(container, "dori")) {
-        diagnostics.push(`${[...path, "gateway"].join(".")} removed: dori is already configured`);
-      } else {
-        result.dori = container.gateway;
-        diagnostics.push(`${[...path, "gateway"].join(".")} renamed to dori`);
-      }
-      delete result.gateway;
-    }
-    return result;
-  };
-  const layer = (container, path) => {
-    const result = rename(container, path);
-    for (const key of HARNESS_BLOCKS) {
-      const block = container[key];
-      if (isRecord11(block))
-        result[key] = rename(block, [...path, key]);
-    }
-    return result;
-  };
-  const result = layer(document, []);
-  if (isRecord11(document.profiles)) {
-    const profiles = {};
-    for (const [name, profile] of Object.entries(document.profiles)) {
-      profiles[name] = isRecord11(profile) ? layer(profile, ["profiles", name]) : profile;
-    }
-    result.profiles = profiles;
-  }
-  return { document: result, diagnostics };
-}
-function hasLegacyGatewaySection(document) {
-  return migrateLegacyDoriSection(document).diagnostics.length > 0;
-}
-var HARNESS_BLOCKS;
-var init_legacy_dori_section = __esm(() => {
-  HARNESS_BLOCKS = ["[opencode]", "[native]", "[senpi]", "[codex]"];
-});
-
 // packages/omo-config-core/src/schema/index.ts
 var init_schema = __esm(() => {
   init_agent();
@@ -77826,12 +77769,10 @@ var init_schema = __esm(() => {
   init_config();
   init_fallback_models();
   init_format_on_mutation();
-  init_dori();
   init_git_master();
   init_harness();
   init_legacy_category_names();
   init_legacy_harness_names();
-  init_legacy_dori_section();
   init_memory();
   init_model_catalog();
   init_model_profile();
@@ -78102,6 +78043,7 @@ function pruneInvalidConfigPaths(config, issues, validate, maxPasses = MAX_PRUNE
 var MAX_PRUNE_PASSES = 32;
 
 // packages/omo-config-core/src/loader/layer-validation.ts
+import { createHash as createHash2 } from "node:crypto";
 function validationDiagnostic(path, issues) {
   const issuePaths = issues.map((issue) => issue.path.map((segment) => String(segment)).join("."));
   return {
@@ -78122,8 +78064,11 @@ function invalidValueDiagnostics(path, dropped) {
 function unrecognizedKeyIssues(issues) {
   return issues.flatMap((issue) => issue.code === "unrecognized_keys" ? [{ keys: issue.keys, path: issue.path.map((segment) => String(segment)) }] : []);
 }
-function isRecord12(value) {
+function isRecord11(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isRetiredSection(key) {
+  return RETIRED_SECTION_DIGESTS.has(createHash2("sha256").update(key.toLowerCase()).digest("hex"));
 }
 function sanitizeUnsafeKeys(value, path = []) {
   if (Array.isArray(value)) {
@@ -78135,7 +78080,7 @@ function sanitizeUnsafeKeys(value, path = []) {
     });
     return { issues, value: sanitized };
   }
-  if (!isRecord12(value))
+  if (!isRecord11(value))
     return { issues: [], value };
   const issues = [];
   if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) {
@@ -78143,6 +78088,9 @@ function sanitizeUnsafeKeys(value, path = []) {
   }
   const sanitized = {};
   for (const [key, entry] of Object.entries(value)) {
+    const isConfigContainer = path.length === 0 || path.length === 1 && HARNESS_BLOCKS.has(path[0] ?? "") || path.length === 2 && path[0] === "profiles" || path.length === 3 && path[0] === "profiles" && HARNESS_BLOCKS.has(path[2] ?? "");
+    if (isConfigContainer && isRetiredSection(key))
+      continue;
     if (isUnsafeObjectKey2(key)) {
       issues.push({ keys: [key], path });
       continue;
@@ -78161,13 +78109,13 @@ function containerAt(record, path) {
       if (!Number.isInteger(index) || index < 0 || index >= node.length)
         return null;
       node = node[index];
-    } else if (isRecord12(node) && Object.hasOwn(node, segment)) {
+    } else if (isRecord11(node) && Object.hasOwn(node, segment)) {
       node = node[segment];
     } else {
       return null;
     }
   }
-  return isRecord12(node) ? node : null;
+  return isRecord11(node) ? node : null;
 }
 function stripUnrecognizedKeys(record, issues) {
   const stripped = structuredClone(record);
@@ -78229,13 +78177,18 @@ function validateConfigLayer(path, data) {
     return rejected;
   return { loaded: true, diagnostics: [...diagnostics, ...invalidValueDiagnostics(path, pruned.dropped)], value: pruned.config };
 }
-var validateLayerRecord = (record) => {
+var RETIRED_SECTION_DIGESTS, HARNESS_BLOCKS, validateLayerRecord = (record) => {
   const parsed = OmoConfigLayerSchema.safeParse(record);
   return parsed.success ? { success: true } : { success: false, issues: parsed.error.issues };
 };
 var init_layer_validation = __esm(() => {
   init_schema();
   init_merge();
+  RETIRED_SECTION_DIGESTS = new Set([
+    "447f75a8ebdbdb79a57f0b8cebbfba183820cf54a8119ac01449b30499e5ef0e",
+    "4ea5ee68fea05586106890ded5733820bb77d919cda27bc4b8139b7cd33b8889"
+  ]);
+  HARNESS_BLOCKS = new Set(["[opencode]", "[native]", "[senpi]", "[codex]"]);
 });
 
 // packages/omo-config-core/src/internal/posix-path.ts
@@ -81795,18 +81748,6 @@ function subscriptionProviderRenamePlan(targetPath) {
     transform: inspect
   };
 }
-function doriSectionRenamePlan(targetPath, rename) {
-  const inspect = (sources) => rename.transform(sources[0]?.value);
-  return {
-    id: DORI_SECTION_RENAME_MIGRATION_ID,
-    inspect,
-    mode: "replace-target",
-    shouldRun: rename.shouldRun,
-    sources: [],
-    targetPath,
-    transform: inspect
-  };
-}
 function existingOmoConfigPath(directory, options) {
   const fileSystem = discoveryFileSystem(options);
   for (const fileName of ["omo.jsonc", "omo.json"]) {
@@ -81868,7 +81809,6 @@ function createLegacyConfigMigrationPlans(options) {
     addReasoningTarget(plan.targetPath);
   const inPlaceTargets = [...reasoningTargets.values()];
   return [
-    ...inPlaceTargets.map((targetPath) => doriSectionRenamePlan(targetPath, options.doriSectionRename)),
     ...legacyPlans,
     ...inPlaceTargets.map(reasoningPlan),
     ...inPlaceTargets.map(categoryDeepSplitPlan),
@@ -81876,7 +81816,6 @@ function createLegacyConfigMigrationPlans(options) {
     ...inPlaceTargets.map(subscriptionProviderRenamePlan)
   ];
 }
-var DORI_SECTION_RENAME_MIGRATION_ID = "2026-10-dori-section-rename";
 var init_migration_plans = __esm(() => {
   init_discovery2();
   init_discovery_paths2();
@@ -81901,16 +81840,6 @@ var init_config_migration = __esm(() => {
   init_transform_config_jsonc();
   init_transform_opencode();
   init_reasoning_unification();
-});
-
-// packages/omo-opencode/src/config-migration/dori-section-rename.ts
-var doriSectionRename;
-var init_dori_section_rename = __esm(() => {
-  init_src4();
-  doriSectionRename = {
-    shouldRun: hasLegacyGatewaySection,
-    transform: migrateLegacyDoriSection
-  };
 });
 
 // packages/omo-opencode/src/startup-migration.ts
@@ -81952,7 +81881,6 @@ function runOpenCodeStartupMigration(options) {
         ...options.backupTimestamp === undefined ? {} : { backupTimestamp: options.backupTimestamp },
         cwd: options.cwd,
         ...options.discoveryFileSystem === undefined ? {} : { fileSystem: options.discoveryFileSystem },
-        doriSectionRename,
         environment: options.environment ?? process.env,
         homeDir,
         pathOperations: options.pathOperations ?? posix5,
@@ -81989,7 +81917,6 @@ function runOpenCodeStartupMigration(options) {
 var init_startup_migration = __esm(() => {
   init_src4();
   init_config_migration();
-  init_dori_section_rename();
 });
 
 // packages/omo-opencode/src/cli/config-manager/deep-merge-record.ts
@@ -82731,7 +82658,7 @@ function shouldRetainLine(line, cutoffMs) {
 function parseDiagnosticLine(line) {
   try {
     const parsed = JSON.parse(line);
-    if (!isRecord14(parsed)) {
+    if (!isRecord13(parsed)) {
       return null;
     }
     return parsed;
@@ -82742,7 +82669,7 @@ function parseDiagnosticLine(line) {
     throw error;
   }
 }
-function isRecord14(value) {
+function isRecord13(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function trimToMaxBytes(lines) {
@@ -82862,13 +82789,13 @@ var init_event_id = __esm(() => {
 });
 
 // packages/telemetry-core/src/machine-id.ts
-import { createHash as createHash5 } from "node:crypto";
+import { createHash as createHash6 } from "node:crypto";
 import os4 from "node:os";
 function getDefaultTelemetryOsProvider() {
   return os4;
 }
 function getTelemetryDistinctId(machineIdPrefix, osProvider = getDefaultTelemetryOsProvider()) {
-  return createHash5("sha256").update(`${machineIdPrefix}${osProvider.hostname()}`).digest("hex");
+  return createHash6("sha256").update(`${machineIdPrefix}${osProvider.hostname()}`).digest("hex");
 }
 var init_machine_id = () => {};
 
@@ -90430,7 +90357,7 @@ function coerceBool(value) {
 function coerceString(value) {
   return typeof value == "string" ? value : undefined;
 }
-function isRecord15(value) {
+function isRecord14(value) {
   return typeof value == "object" && value !== null && !Array.isArray(value);
 }
 function toRfc3339(timestamp) {
@@ -90452,7 +90379,7 @@ function relocateInto(properties, key, value) {
     properties[key] = value;
 }
 function buildV1Event(message) {
-  const sourceProperties = isRecord15(message.properties) ? message.properties : {};
+  const sourceProperties = isRecord14(message.properties) ? message.properties : {};
   const properties = {
     ...sourceProperties
   };
@@ -92533,7 +92460,7 @@ var package_default2;
 var init_package2 = __esm(() => {
   package_default2 = {
     name: "@oh-my-opencode/omo-codex",
-    version: "5.1.45",
+    version: "5.1.46",
     type: "module",
     private: true,
     description: "Codex harness adapter for oh-my-openagent. Vendored Codex plugin namespace (omo) + TypeScript installer + telemetry.",
@@ -96703,10 +96630,10 @@ function readCatalogMultiAgentVersion(model, cachePath) {
   } catch {
     return null;
   }
-  if (!isRecord13(cache) || !Array.isArray(cache.models))
+  if (!isRecord12(cache) || !Array.isArray(cache.models))
     return null;
   for (const entry of cache.models) {
-    if (!isRecord13(entry))
+    if (!isRecord12(entry))
       continue;
     if (entry.slug !== model && entry.id !== model)
       continue;
@@ -96731,7 +96658,7 @@ function readRootModelCatalogPath(config) {
   const single = config.match(/^\s*model_catalog_json\s*=\s*'([^']+)'/m);
   return single?.[1] ?? null;
 }
-function isRecord13(value) {
+function isRecord12(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function removeFeatureFlagSetting(config, featureName) {
@@ -96849,7 +96776,7 @@ function isMissingFileError(error) {
 }
 
 // packages/omo-codex/src/install/codex-hook-trust.ts
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 import { readFile as readFile12 } from "node:fs/promises";
 import { join as join38 } from "node:path";
 var EVENT_LABELS = new Map([
@@ -96941,7 +96868,7 @@ function commandHookHash(eventName, matcher, handler, command) {
   if (typeof matcher === "string")
     identity.matcher = matcher;
   const canonical = JSON.stringify(canonicalJson(identity));
-  return `sha256:${createHash2("sha256").update(canonical).digest("hex")}`;
+  return `sha256:${createHash3("sha256").update(canonical).digest("hex")}`;
 }
 function canonicalJson(value) {
   if (Array.isArray(value))
@@ -97620,7 +97547,7 @@ function nodeErrorCode2(error) {
 }
 
 // packages/omo-codex/src/install/default-agent-role.ts
-import { createHash as createHash3 } from "node:crypto";
+import { createHash as createHash4 } from "node:crypto";
 import { lstat as lstat9, readFile as readFile16, rm as rm10 } from "node:fs/promises";
 import { join as join43 } from "node:path";
 var REGISTRATION = { name: "default", configFile: "./agents/default.toml" };
@@ -97676,7 +97603,7 @@ async function readIfPresent(path) {
   }
 }
 function hash(content) {
-  return createHash3("sha256").update(content).digest("hex");
+  return createHash4("sha256").update(content).digest("hex");
 }
 
 // packages/omo-codex/src/install/link-cached-plugin-agents.ts
@@ -98341,7 +98268,7 @@ function formatUnknownError(error) {
 }
 
 // packages/omo-codex/src/install/lsp-daemon-reaper.ts
-import { createHash as createHash4 } from "node:crypto";
+import { createHash as createHash5 } from "node:crypto";
 import { lstat as lstat12, readFile as readFile22, readdir as readdir10, rm as rm12 } from "node:fs/promises";
 import { tmpdir as tmpdir3 } from "node:os";
 import { join as join48, posix as posix6 } from "node:path";
@@ -98619,7 +98546,7 @@ async function readRegularTrimmedFile(path) {
   return content.length > 0 ? content : null;
 }
 function shortDigest(value) {
-  return createHash4("sha256").update(value).digest("hex").slice(0, 16);
+  return createHash5("sha256").update(value).digest("hex").slice(0, 16);
 }
 async function removeVersionDir(path) {
   await rm12(path, { recursive: true, force: true });
@@ -99690,7 +99617,7 @@ node "%~dp0omo" %*\r
 }
 
 // packages/omo-senpi/src/install/plugin-artifacts.ts
-import { createHash as createHash6 } from "node:crypto";
+import { createHash as createHash7 } from "node:crypto";
 import { constants as constants9 } from "node:fs";
 import { access as access2, readFile as readFile29, stat as stat6 } from "node:fs/promises";
 import { dirname as dirname24, join as join63 } from "node:path";
@@ -99729,7 +99656,7 @@ async function readSettings(settingsPath) {
     throw error;
   }
   const parsed = JSON.parse(raw);
-  if (!isRecord16(parsed))
+  if (!isRecord15(parsed))
     throw new Error(`${settingsPath} must contain a JSON object`);
   return parsed;
 }
@@ -99790,7 +99717,7 @@ async function nextBackupPath(settingsPath) {
 function timestampForBackup() {
   return new Date().toISOString().replace(/[-:.]/g, "");
 }
-function isRecord16(value) {
+function isRecord15(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 async function readPackageName(packagePath) {
@@ -99810,7 +99737,7 @@ async function readPackageName(packagePath) {
       return;
     throw error;
   }
-  return isRecord16(parsed) && typeof parsed.name === "string" ? parsed.name : undefined;
+  return isRecord15(parsed) && typeof parsed.name === "string" ? parsed.name : undefined;
 }
 async function fileExists(path) {
   try {
@@ -99838,7 +99765,6 @@ var REQUIRED_PLUGIN_ARTIFACTS = [
   join63("extensions", "omo-memory-commands.js"),
   join63("extensions", "omo-session-history.js"),
   join63("extensions", "omo-recall-store.js"),
-  join63("extensions", "omo-dori-migration.js"),
   join63("extensions", "omo-telemetry-posthog.js"),
   join63("extensions", "omo-memory-sync.js"),
   join63("extensions", "loro_wasm_bg.wasm"),
@@ -99935,7 +99861,7 @@ async function verifyAstGrepRuntimeIntegrity(pluginPath, platform) {
   }
   let actualSha256;
   try {
-    actualSha256 = createHash6("sha256").update(await readFile29(runtimeEntry)).digest("hex");
+    actualSha256 = createHash7("sha256").update(await readFile29(runtimeEntry)).digest("hex");
   } catch (error) {
     throw astGrepIntegrityError(runtimeEntry, `runtime hash could not be computed: ${messageOf(error)}`);
   }
@@ -99948,7 +99874,7 @@ async function verifyAstGrepRuntimeIntegrity(pluginPath, platform) {
   }
 }
 function isAstGrepRuntimeManifest(value) {
-  if (!isRecord16(value))
+  if (!isRecord15(value))
     return false;
   return typeof value.sha256 === "string" && /^[a-f0-9]{64}$/.test(value.sha256) && typeof value.mode === "number" && Number.isInteger(value.mode) && typeof value.stagedAtUtc === "string" && !Number.isNaN(Date.parse(value.stagedAtUtc));
 }
@@ -108046,13 +107972,11 @@ async function checkModels() {
 
 // packages/omo-opencode/src/cli/doctor/checks/legacy-config-leftovers.ts
 init_config_migration();
-init_dori_section_rename();
 import { posix as posix12, win32 as win329 } from "node:path";
 function findLegacyConfigLeftovers(options) {
   const pathOperations = options.pathOperations ?? (process.platform === "win32" ? win329 : posix12);
   const paths = createLegacyConfigMigrationPlans({
     cwd: options.cwd,
-    doriSectionRename,
     environment: options.environment ?? process.env,
     homeDir: options.homeDir,
     pathOperations,
@@ -108251,14 +108175,14 @@ var CANONICAL_REPLACEMENT = new Map([
 var MIGRATE_SUFFIX = ", or run: oh-my-openagent config migrate";
 var TUNING_CONTAINERS = new Set(["agents", "categories", "models"]);
 var PASSTHROUGH_CONTAINERS = new Set(["provider_options", "providerOptions"]);
-function isRecord17(value) {
+function isRecord16(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function isHarnessBlock(key) {
   return key.startsWith("[") && key.endsWith("]");
 }
 function collectIssues(configPath, value, prefix, fixSuffix) {
-  if (!isRecord17(value))
+  if (!isRecord16(value))
     return [];
   const issues = [];
   for (const [key, child] of Object.entries(value)) {
@@ -108274,7 +108198,7 @@ function collectIssues(configPath, value, prefix, fixSuffix) {
       });
       continue;
     }
-    if (!isRecord17(child))
+    if (!isRecord16(child))
       continue;
     if (PASSTHROUGH_CONTAINERS.has(key))
       continue;
@@ -108293,7 +108217,7 @@ function collectIssues(configPath, value, prefix, fixSuffix) {
   return issues;
 }
 function migrateFixSuffix(parsed) {
-  if (isRecord17(parsed) && hasMigrationMarker(parsed, REASONING_UNIFICATION_MIGRATION_ID))
+  if (isRecord16(parsed) && hasMigrationMarker(parsed, REASONING_UNIFICATION_MIGRATION_ID))
     return "";
   return MIGRATE_SUFFIX;
 }
@@ -109158,10 +109082,6 @@ var package_default3 = {
       types: "./src/cli/service-auth/index.ts",
       import: "./src/cli/service-auth/index.ts"
     },
-    "./config-migration/dori-section-rename": {
-      types: "./src/config-migration/dori-section-rename.ts",
-      import: "./src/config-migration/dori-section-rename.ts"
-    },
     "./binary-downloader": {
       types: "./src/shared/binary-downloader.ts",
       import: "./src/shared/binary-downloader.ts"
@@ -109592,12 +109512,12 @@ async function auditBundleTargets(pluginRoot) {
   let referencedCount = 0;
   for (const manifestPath of await findManifestPaths(pluginRoot, ".mcp.json")) {
     const manifest = await readJson2(manifestPath);
-    if (manifest === null || !isRecord19(manifest["mcpServers"]))
+    if (manifest === null || !isRecord18(manifest["mcpServers"]))
       continue;
     const manifestRoot = dirname39(manifestPath);
     const isRootManifest = resolve28(manifestRoot) === resolve28(pluginRoot);
     for (const server of Object.values(manifest["mcpServers"])) {
-      if (!isRecord19(server) || !Array.isArray(server["args"]))
+      if (!isRecord18(server) || !Array.isArray(server["args"]))
         continue;
       for (const arg of server["args"]) {
         if (typeof arg !== "string" || !isPluginRuntimePathArg(arg))
@@ -109683,7 +109603,7 @@ function collectHookCommands(value, commands) {
       collectHookCommands(item, commands);
     return;
   }
-  if (!isRecord19(value))
+  if (!isRecord18(value))
     return;
   if (value["type"] === "command") {
     if (typeof value["command"] === "string")
@@ -109738,7 +109658,7 @@ function parseDegradedEntries(value) {
     return [];
   const entries = [];
   for (const item of value) {
-    if (!isRecord19(item))
+    if (!isRecord18(item))
       continue;
     if (typeof item["component"] !== "string" || typeof item["reason"] !== "string")
       continue;
@@ -109772,7 +109692,7 @@ function degradedDetailLines(entries) {
 async function readJson2(path) {
   try {
     const parsed = JSON.parse(await readFile31(path, "utf8"));
-    return isRecord19(parsed) ? parsed : null;
+    return isRecord18(parsed) ? parsed : null;
   } catch (error) {
     if (error instanceof Error)
       return null;
@@ -109793,7 +109713,7 @@ function normalizeRelative(root, target) {
 function normalizePathSeparators(path) {
   return path.split("\\").join("/");
 }
-function isRecord19(value) {
+function isRecord18(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -110338,7 +110258,7 @@ Doctor failed unexpectedly: ${message}`];
 init_commander();
 
 // packages/mcp-client-core/src/mcp-oauth/storage.ts
-import { createHash as createHash7 } from "node:crypto";
+import { createHash as createHash8 } from "node:crypto";
 import {
   chmodSync as chmodSync5,
   existsSync as existsSync65,
@@ -110433,7 +110353,7 @@ function getMcpOauthStorageDir() {
   return join101(getOpenCodeCliConfigDir(), STORAGE_DIR_NAME);
 }
 function getMcpOauthServerHash(serverHost, resource) {
-  return createHash7("sha256").update(buildKey(serverHost, resource)).digest("hex").slice(0, 32);
+  return createHash8("sha256").update(buildKey(serverHost, resource)).digest("hex").slice(0, 32);
 }
 function getMcpOauthStoragePath(serverHost, resource) {
   return join101(getMcpOauthStorageDir(), `${getMcpOauthServerHash(serverHost, resource)}.json`);
@@ -110807,13 +110727,13 @@ async function findAvailablePort2(startPort = DEFAULT_PORT) {
 
 // packages/mcp-client-core/src/mcp-oauth/oauth-authorization-flow.ts
 import { spawn as spawn4 } from "node:child_process";
-import { createHash as createHash8, randomBytes as randomBytes2 } from "node:crypto";
+import { createHash as createHash9, randomBytes as randomBytes2 } from "node:crypto";
 import { createServer as createServer2 } from "node:http";
 function generateCodeVerifier() {
   return randomBytes2(32).toString("base64url");
 }
 function generateCodeChallenge(verifier) {
-  return createHash8("sha256").update(verifier).digest("base64url");
+  return createHash9("sha256").update(verifier).digest("base64url");
 }
 function buildAuthorizationUrl(authorizationEndpoint, options) {
   const url = new URL(authorizationEndpoint);
@@ -112175,7 +112095,7 @@ async function loginDevice(session, options) {
 }
 
 // packages/omo-opencode/src/cli/service-auth/keystore.ts
-import { createHash as createHash9 } from "node:crypto";
+import { createHash as createHash10 } from "node:crypto";
 
 // packages/omo-opencode/src/cli/service-auth/secret-service-lock.ts
 import { spawn as spawn5 } from "node:child_process";
@@ -112236,7 +112156,7 @@ var stderrNoticeOncePerProcess = (message) => {
 };
 var isLocked = (error) => error instanceof Error && (LOCKED.test(error.message) || LOCKED.test(String(error.code ?? "")));
 function credentialId(api) {
-  return createHash9("sha256").update(serviceOrigin(api)).digest("hex");
+  return createHash10("sha256").update(serviceOrigin(api)).digest("hex");
 }
 function createCredentialStore(api, secrets = typeof Bun === "undefined" ? null : Bun.secrets, platform = process.platform, lockProbe = probeSecretServiceLock, notice = stderrNoticeOncePerProcess) {
   if (!secrets)
@@ -112300,7 +112220,7 @@ function createCredentialStore(api, secrets = typeof Bun === "undefined" ? null 
 }
 
 // packages/omo-opencode/src/cli/service-auth/loopback.ts
-import { createHash as createHash10, randomBytes as randomBytes3, timingSafeEqual } from "node:crypto";
+import { createHash as createHash11, randomBytes as randomBytes3, timingSafeEqual } from "node:crypto";
 import { createServer as createServer3 } from "node:http";
 class BrowserUnavailable extends SignInError {
 }
@@ -112346,7 +112266,7 @@ async function authorize(options) {
     const url = new URL(serviceOrigin(options.accounts));
     url.search = new URLSearchParams({
       redirect_uri: `${origin}/callback`,
-      code_challenge: createHash10("sha256").update(verifier).digest("base64url"),
+      code_challenge: createHash11("sha256").update(verifier).digest("base64url"),
       code_challenge_method: "S256",
       state
     }).toString();
@@ -112535,7 +112455,7 @@ async function publishLockRecord(lockPath, record) {
 }
 
 // packages/team-core/src/team-state-store/lock-reclaim.ts
-import { createHash as createHash11 } from "node:crypto";
+import { createHash as createHash12 } from "node:crypto";
 import { unlink as unlink3 } from "node:fs/promises";
 var RECLAIM_UNLINK_ATTEMPTS = 3;
 var RECLAIM_UNLINK_RETRY_MS = 25;
@@ -112545,7 +112465,7 @@ function delay2(ms) {
   });
 }
 function reclaimGuardPath(lockPath, record) {
-  return `${lockPath}.reclaim-${createHash11("sha256").update(record).digest("hex").slice(0, 16)}`;
+  return `${lockPath}.reclaim-${createHash12("sha256").update(record).digest("hex").slice(0, 16)}`;
 }
 async function unlinkWithRetry(path, deps) {
   const wait = deps.delay ?? delay2;

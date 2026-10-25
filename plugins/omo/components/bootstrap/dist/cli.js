@@ -7147,6 +7147,7 @@ var OmoMemoryReflectionSchema = object({
   merge: _enum(["auto", "integration"]).default("auto"),
   category: string2().min(1).default("quick"),
   timeout_minutes: number2().int().positive().default(15),
+  max_concurrent_runs: number2().int().positive().default(1),
   sandbox: _enum(["auto", "required", "off"]).default("auto")
 }).strict();
 var OmoMemorySyncSchema = object({
@@ -7218,6 +7219,7 @@ var OmoMemoryReflectionLayerSchema = object({
   merge: _enum(["auto", "integration"]).optional(),
   category: string2().min(1).optional(),
   timeout_minutes: number2().int().positive().optional(),
+  max_concurrent_runs: number2().int().positive().optional(),
   sandbox: _enum(["auto", "required", "off"]).optional()
 }).strict();
 var OmoMemorySyncLayerSchema = object({
@@ -7282,7 +7284,7 @@ var OmoMemoryProjectionLayerSchema = object({
 var OmoMemoryAgentOverridesSchema = object({
   enabled: boolean2().optional(),
   agent: string2().min(1).optional(),
-  reflection: OmoMemoryReflectionLayerSchema.optional(),
+  reflection: OmoMemoryReflectionLayerSchema.omit({ max_concurrent_runs: true }).optional(),
   nudge: OmoMemoryNudgeLayerSchema.optional(),
   facts: OmoMemoryFactsLayerSchema.optional(),
   dream: OmoMemoryDreamLayerSchema.optional(),
@@ -7307,6 +7309,7 @@ var OmoMemorySettingsSchema = object({
     merge: "auto",
     category: "quick",
     timeout_minutes: 15,
+    max_concurrent_runs: 1,
     sandbox: "auto"
   }),
   nudge: OmoMemoryNudgeSchema.default({ enabled: true, every_user_turns: 10 }),
@@ -7650,9 +7653,6 @@ var OmoFormatOnMutationSchema = OmoFormatOnMutationLayerSchema.extend({
   timeoutMs: number2().int().positive().default(3000)
 }).strict();
 
-// ../../omo-config-core/src/schema/dori.ts
-var OmoDoriSectionSchema = record(string2(), unknown()).describe("Chat-surface dori settings, owned and validated by a separately installed dori package. omo accepts the key and never reads it.");
-
 // ../../omo-config-core/src/schema/provenance.ts
 var OmoProvenanceSettingsSchema = object({
   workspaces: array(object({
@@ -7669,7 +7669,6 @@ var OmoExcludedModelsSchema = array(string2());
 var OmoTypedHarnessConfigSchema = object({
   provenance: OmoProvenanceSettingsSchema.optional(),
   formatOnMutation: OmoFormatOnMutationLayerSchema.optional(),
-  dori: OmoDoriSectionSchema.optional(),
   categories: OmoCategoriesConfigSchema.optional(),
   agents: OmoAgentsConfigSchema.optional(),
   git_master: OmoGitMasterSettingsLayerSchema.optional(),
@@ -7688,7 +7687,6 @@ var OmoTypedHarnessConfigSchema = object({
 var OmoConfigProfileSchema = object({
   provenance: OmoProvenanceSettingsSchema.optional(),
   formatOnMutation: OmoFormatOnMutationLayerSchema.optional(),
-  dori: OmoDoriSectionSchema.optional(),
   categories: OmoCategoriesConfigSchema.optional(),
   agents: OmoAgentsConfigSchema.optional(),
   git_master: OmoGitMasterSettingsLayerSchema.optional(),
@@ -7711,7 +7709,6 @@ var OmoConfigProfileSchema = object({
 var OmoConfigSchema = object({
   provenance: OmoProvenanceSettingsSchema.optional(),
   formatOnMutation: OmoFormatOnMutationSchema.optional(),
-  dori: OmoDoriSectionSchema.optional(),
   $schema: string2().optional(),
   categories: OmoCategoriesConfigSchema.optional(),
   agents: OmoAgentsConfigSchema.optional(),
@@ -7738,7 +7735,6 @@ var OmoConfigSchema = object({
 var OmoConfigLayerSchema = object({
   provenance: OmoProvenanceSettingsSchema.optional(),
   formatOnMutation: OmoFormatOnMutationLayerSchema.optional(),
-  dori: OmoDoriSectionSchema.optional(),
   $schema: string2().optional(),
   categories: OmoCategoriesConfigSchema.optional(),
   agents: OmoAgentsConfigSchema.optional(),
@@ -8762,6 +8758,9 @@ function printParseErrorCode(code) {
   return "<unknown ParseErrorCode>";
 }
 
+// ../../omo-config-core/src/loader/layer-validation.ts
+import { createHash as createHash3 } from "node:crypto";
+
 // ../../omo-config-core/src/loader/merge.ts
 var DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 function isUnsafeObjectKey(key) {
@@ -8935,6 +8934,14 @@ function unrecognizedKeyIssues(issues) {
 function isRecord9(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+var RETIRED_SECTION_DIGESTS = new Set([
+  "447f75a8ebdbdb79a57f0b8cebbfba183820cf54a8119ac01449b30499e5ef0e",
+  "4ea5ee68fea05586106890ded5733820bb77d919cda27bc4b8139b7cd33b8889"
+]);
+function isRetiredSection(key) {
+  return RETIRED_SECTION_DIGESTS.has(createHash3("sha256").update(key.toLowerCase()).digest("hex"));
+}
+var HARNESS_BLOCKS = new Set(["[opencode]", "[native]", "[senpi]", "[codex]"]);
 function sanitizeUnsafeKeys(value, path = []) {
   if (Array.isArray(value)) {
     const issues = [];
@@ -8953,6 +8960,9 @@ function sanitizeUnsafeKeys(value, path = []) {
   }
   const sanitized = {};
   for (const [key, entry] of Object.entries(value)) {
+    const isConfigContainer = path.length === 0 || path.length === 1 && HARNESS_BLOCKS.has(path[0] ?? "") || path.length === 2 && path[0] === "profiles" || path.length === 3 && path[0] === "profiles" && HARNESS_BLOCKS.has(path[2] ?? "");
+    if (isConfigContainer && isRetiredSection(key))
+      continue;
     if (isUnsafeObjectKey(key)) {
       issues.push({ keys: [key], path });
       continue;
@@ -10502,7 +10512,7 @@ function nodeErrorCode2(error) {
 }
 
 // ../src/install/default-agent-role.ts
-import { createHash as createHash3 } from "node:crypto";
+import { createHash as createHash4 } from "node:crypto";
 import { lstat as lstat5, readFile as readFile7, rm as rm7 } from "node:fs/promises";
 import { join as join13 } from "node:path";
 
@@ -10670,7 +10680,7 @@ async function readIfPresent(path) {
   }
 }
 function hash(content) {
-  return createHash3("sha256").update(content).digest("hex");
+  return createHash4("sha256").update(content).digest("hex");
 }
 
 // ../src/install/link-cached-plugin-agents.ts
@@ -12081,7 +12091,7 @@ async function stampGitBashMcpEnv(input) {
 }
 
 // ../src/install/codex-hook-trust.ts
-import { createHash as createHash4 } from "node:crypto";
+import { createHash as createHash5 } from "node:crypto";
 import { readFile as readFile15 } from "node:fs/promises";
 import { join as join22 } from "node:path";
 var EVENT_LABELS = new Map([
@@ -12173,7 +12183,7 @@ function commandHookHash(eventName, matcher, handler, command) {
   if (typeof matcher === "string")
     identity.matcher = matcher;
   const canonical = JSON.stringify(canonicalJson(identity));
-  return `sha256:${createHash4("sha256").update(canonical).digest("hex")}`;
+  return `sha256:${createHash5("sha256").update(canonical).digest("hex")}`;
 }
 function canonicalJson(value) {
   if (Array.isArray(value))
