@@ -460,13 +460,9 @@ function getTelemetryHost(env = process.env, defaultHost = DEFAULT_POSTHOG_HOST)
 }
 
 // ../../../../telemetry-core/src/machine-id.ts
-import { createHash } from "node:crypto";
 import os2 from "node:os";
 function getDefaultTelemetryOsProvider() {
   return os2;
-}
-function getTelemetryDistinctId(machineIdPrefix, osProvider = getDefaultTelemetryOsProvider()) {
-  return createHash("sha256").update(`${machineIdPrefix}${osProvider.hostname()}`).digest("hex");
 }
 
 // ../../../../telemetry-core/src/injected-client.ts
@@ -9710,26 +9706,72 @@ function createDefaultPostHogTransport(apiKey, options) {
   return new PostHogTelemetryTransport(apiKey, options);
 }
 
+// ../../../../telemetry-core/src/install-id.ts
+import { createHash, randomBytes } from "node:crypto";
+import { mkdirSync as mkdirSync5, readFileSync as readFileSync3, writeFileSync as writeFileSync2 } from "node:fs";
+import { dirname as dirname3, join as join4 } from "node:path";
+var TELEMETRY_INSTALL_ID_FILE_NAME = "install-id";
+var INSTALL_ID_PATTERN = /^[0-9a-f]{64}$/;
+var fallbackInstallIds = new Map;
+function getTelemetryInstallDistinctId(stateDir) {
+  return createHash("sha256").update(readOrCreateInstallId(join4(stateDir, TELEMETRY_INSTALL_ID_FILE_NAME))).digest("hex");
+}
+function readOrCreateInstallId(path) {
+  const persisted = readInstallId(path);
+  if (persisted !== undefined)
+    return persisted;
+  const installId = randomBytes(32).toString("hex");
+  try {
+    mkdirSync5(dirname3(path), { recursive: true });
+    writeFileSync2(path, `${installId}
+`, { flag: "wx", mode: 384 });
+    fallbackInstallIds.delete(path);
+    return installId;
+  } catch {
+    const concurrentlyCreated = readInstallId(path);
+    if (concurrentlyCreated !== undefined)
+      return concurrentlyCreated;
+    try {
+      writeFileSync2(path, `${installId}
+`, { flag: "w", mode: 384 });
+      fallbackInstallIds.delete(path);
+      return installId;
+    } catch {}
+    const fallback = fallbackInstallIds.get(path);
+    if (fallback !== undefined)
+      return fallback;
+    fallbackInstallIds.set(path, installId);
+    return installId;
+  }
+}
+function readInstallId(path) {
+  try {
+    const value = readFileSync3(path, "utf8").trim();
+    return INSTALL_ID_PATTERN.test(value) ? value : undefined;
+  } catch {
+    return;
+  }
+}
+
 // ../../../../telemetry-core/src/posthog-client.ts
 function createTelemetryClient2(input) {
   return createTelemetryClient({ ...input, transportFactory: input.transportFactory ?? createDefaultPostHogTransport });
 }
 
 // src/product-identity.ts
-import { readFileSync as readFileSync3 } from "node:fs";
+import { readFileSync as readFileSync4 } from "node:fs";
 var PRODUCT_NAME = "omo-codex";
 var PACKAGE_NAME = "@oh-my-opencode/omo-codex";
 var CACHE_DIR_NAME = "omo-codex";
 var EVENT_NAME = "omo_codex_daily_active";
 var PRODUCT_ENV_PREFIX = "OMO_CODEX";
-var MACHINE_ID_PREFIX = "omo-codex:";
 function isComponentPackageManifest(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function readComponentVersionFromManifest() {
   try {
     const manifestUrl = new URL("../package.json", import.meta.url);
-    const manifestText = readFileSync3(manifestUrl, "utf-8");
+    const manifestText = readFileSync4(manifestUrl, "utf-8");
     const parsed = JSON.parse(manifestText);
     if (isComponentPackageManifest(parsed) && typeof parsed.version === "string") {
       return parsed.version;
@@ -9752,7 +9794,6 @@ function createComponentTelemetryProductConfig(additionalProperties) {
     defaultApiKey: DEFAULT_POSTHOG_API_KEY,
     defaultHost: DEFAULT_POSTHOG_HOST,
     eventName: EVENT_NAME,
-    machineIdPrefix: MACHINE_ID_PREFIX,
     packageName: PACKAGE_NAME,
     packageVersion: getComponentVersion(),
     platform: "omo-codex",
@@ -9831,14 +9872,14 @@ function createPluginPostHogClient(options = {}) {
   }
   const activityStateProvider = resolveActivityStateProvider(options);
   return {
-    trackActive: (distinctId, reason) => {
+    trackActive: (reason) => {
       const activityState = activityStateProvider();
       if (!activityState.captureDaily) {
         return;
       }
       client.trackActive({
         dayUTC: activityState.dayUTC,
-        distinctId,
+        distinctId: getTelemetryInstallDistinctId(options.stateDir ?? getComponentTelemetryStateDir()),
         reason
       });
     },
@@ -9850,21 +9891,13 @@ function createPluginPostHogClient(options = {}) {
 async function createPluginPostHog() {
   return createPluginPostHogClient();
 }
-function getPostHogDistinctId() {
-  return getTelemetryDistinctId(MACHINE_ID_PREFIX, getDefaultTelemetryOsProvider());
-}
 function __createPluginPostHogForTesting(options) {
   return createPluginPostHogClient(options);
-}
-function getPostHogDistinctIdForTesting(osProvider) {
-  return getTelemetryDistinctId(MACHINE_ID_PREFIX, osProvider);
 }
 export {
   DEFAULT_POSTHOG_API_KEY,
   DEFAULT_POSTHOG_HOST,
   __createPluginPostHogForTesting,
   createPluginPostHog,
-  getComponentVersion,
-  getPostHogDistinctId,
-  getPostHogDistinctIdForTesting
+  getComponentVersion
 };
