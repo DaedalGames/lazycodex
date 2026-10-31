@@ -8,7 +8,7 @@ import { argv, execPath as execPath2, stderr } from "node:process";
 import { stdin as processStdin } from "node:process";
 
 // src/codex-hook.ts
-import { readFileSync as readFileSync10, realpathSync as realpathSync7 } from "node:fs";
+import { readFileSync as readFileSync10, realpathSync as realpathSync8 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import { join as join12, resolve as resolve13 } from "node:path";
 
@@ -45,7 +45,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { statSync as statSync2 } from "node:fs";
 import { isAbsolute as isAbsolute2 } from "node:path";
-import { existsSync as existsSync11, realpathSync as realpathSync5, statSync as statSync4 } from "node:fs";
+import { existsSync as existsSync11, realpathSync as realpathSync6, statSync as statSync4 } from "node:fs";
 import { basename as basename3, dirname as dirname10, join as join5, resolve as resolve8 } from "node:path";
 import { basename as basename2, extname } from "node:path";
 import { resolve as resolve6 } from "node:path";
@@ -70,6 +70,7 @@ import { dirname as dirname7, join as join3 } from "node:path";
 import { existsSync as existsSync8, mkdirSync as mkdirSync3, readFileSync as readFileSync4, renameSync as renameSync2, writeFileSync as writeFileSync2 } from "node:fs";
 import { dirname as dirname8 } from "node:path";
 import { existsSync as existsSync9, readFileSync as readFileSync5 } from "node:fs";
+import { closeSync as closeSync3, openSync as openSync3, readSync, realpathSync as realpathSync5 } from "node:fs";
 import { existsSync as existsSync10 } from "node:fs";
 import { delimiter as delimiter3, dirname as dirname9, isAbsolute as isAbsolute5, join as join4, resolve as resolve7 } from "node:path";
 import { existsSync as existsSync12, lstatSync as lstatSync5, readdirSync as readdirSync3 } from "node:fs";
@@ -3872,10 +3873,15 @@ var LSP_LOCAL_INSTALL_HINTS = {
   ty: "uv add --dev ty",
   "ruby-lsp": "bundle add ruby-lsp --group development"
 };
+var TYPESCRIPT_SERVER_INITIALIZATION = {
+  tsserver: { useSyntaxServer: "never" },
+  disableAutomaticTypingAcquisition: true
+};
 var BUILTIN_SERVERS = {
   typescript: {
     command: ["typescript-language-server", "--stdio"],
-    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
+    initialization: TYPESCRIPT_SERVER_INITIALIZATION
   },
   deno: { command: ["deno", "lsp"], extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs"] },
   vue: { command: ["vue-language-server", "--stdio"], extensions: [".vue"] },
@@ -4086,7 +4092,8 @@ function getMergedServers() {
       command: config.command,
       extensions: config.extensions,
       priority: -100,
-      source: "builtin"
+      source: "builtin",
+      ...config.initialization === undefined ? {} : { initialization: config.initialization }
     });
   }
   return servers.sort((a, b) => {
@@ -4113,8 +4120,9 @@ function createServerFromEntry(id, entry, source) {
       priority: entry.priority ?? 0,
       source
     });
-    if (entry.initialization !== undefined) {
-      server.initialization = entry.initialization;
+    const initialization = mergeInitialization(builtin.initialization, entry.initialization);
+    if (initialization !== undefined) {
+      server.initialization = initialization;
     }
     return server;
   }
@@ -4139,7 +4147,19 @@ function createServerFromEntry(id, entry, source) {
     source
   });
   applyOptionalServerFields(server, entry);
+  const builtinInitialization = entry.command === undefined ? builtin.initialization : undefined;
+  const initialization = mergeInitialization(builtinInitialization, entry.initialization);
+  if (initialization !== undefined) {
+    server.initialization = initialization;
+  }
   return server;
+}
+function mergeInitialization(builtin, entry) {
+  if (builtin === undefined)
+    return entry;
+  if (entry === undefined)
+    return builtin;
+  return { ...builtin, ...entry };
 }
 function createServer(input) {
   const server = {
@@ -4209,6 +4229,46 @@ function getDisabledServerIds() {
     }
   }
   return disabled;
+}
+var HOST_RUNTIME_SERVER_IDS = new Set(["typescript"]);
+var JS_ENTRY = /\.[cm]?js$/;
+var NODE_SHEBANG = /^#![^\n]*\bnode\b/;
+function currentHostJsRuntime() {
+  return { bunExecPath: process.versions["bun"] === undefined ? undefined : process.execPath };
+}
+function withHostJsRuntime(serverId, command, host = currentHostJsRuntime()) {
+  if (host.bunExecPath === undefined || !HOST_RUNTIME_SERVER_IDS.has(serverId))
+    return command;
+  const [binary, ...args] = command;
+  if (binary === undefined)
+    return command;
+  const script = nodeScriptPath(binary);
+  return script === undefined ? command : [host.bunExecPath, script, ...args];
+}
+function nodeScriptPath(binary) {
+  let real;
+  try {
+    real = realpathSync5(binary);
+  } catch {
+    return;
+  }
+  if (JS_ENTRY.test(real))
+    return real;
+  try {
+    return NODE_SHEBANG.test(readHead(real)) ? real : undefined;
+  } catch {
+    return;
+  }
+}
+function readHead(path) {
+  const fd = openSync3(path, "r");
+  try {
+    const buffer = Buffer.alloc(128);
+    const bytes = readSync(fd, buffer, 0, buffer.length, 0);
+    return buffer.toString("utf8", 0, bytes);
+  } finally {
+    closeSync3(fd);
+  }
 }
 var LOCAL_BIN_RULES = [
   {
@@ -4344,6 +4404,10 @@ function isServerInstalled(command, workingDirectory, options = {}) {
 function withResolvedCommand(command, binaryPath) {
   return [binaryPath, ...command.slice(1)];
 }
+function usesBuiltinCommand(id, command) {
+  const builtin = BUILTIN_SERVERS[id]?.command;
+  return builtin !== undefined && builtin.length === command.length && builtin.every((part, index) => part === command[index]);
+}
 function findServerForExtension(ext) {
   const servers = getMergedServers();
   const workingDirectory = contextCwd();
@@ -4354,7 +4418,7 @@ function findServerForExtension(ext) {
     if (binaryPath !== null) {
       const resolvedServer = {
         id: server.id,
-        command: withResolvedCommand(server.command, binaryPath),
+        command: usesBuiltinCommand(server.id, server.command) ? withHostJsRuntime(server.id, withResolvedCommand(server.command, binaryPath)) : withResolvedCommand(server.command, binaryPath),
         extensions: server.extensions,
         priority: server.priority
       };
@@ -4493,7 +4557,7 @@ function rebaseThroughCanonicalAncestor(path, cwd) {
   const suffix = [];
   while (true) {
     if (existsSync11(current)) {
-      const canonical = realpathSync5(current);
+      const canonical = realpathSync6(current);
       if (isPathInside(cwd, canonical))
         return suffix.length === 0 ? canonical : join5(canonical, ...suffix);
     }
@@ -4507,7 +4571,7 @@ function rebaseThroughCanonicalAncestor(path, cwd) {
 function existingDirectoryInsideContext(directory, cwd) {
   if (!existsSync11(directory))
     return;
-  const canonical = realpathSync5(directory);
+  const canonical = realpathSync6(directory);
   if (!statSync4(canonical).isDirectory())
     return;
   return isPathInside(cwd, canonical) ? canonical : undefined;
@@ -6129,7 +6193,7 @@ var WORKSPACE_MARKERS2 = [GIT_WORKSPACE_MARKER2, ...PROJECT_WORKSPACE_MARKERS2];
 
 // ../../../../lsp-core/src/request-context.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
-import { existsSync as existsSync14, realpathSync as realpathSync6, statSync as statSync7 } from "node:fs";
+import { existsSync as existsSync14, realpathSync as realpathSync7, statSync as statSync7 } from "node:fs";
 import { basename as basename4, delimiter as delimiter4, dirname as dirname2, isAbsolute as isAbsolute7, join as join9, relative as relative5, resolve as resolve12 } from "node:path";
 
 class LspRequestContextParseError2 extends Error {
@@ -6175,14 +6239,14 @@ function canonicalCwd2(cwd) {
   if (!existsSync14(resolved) || !statSync7(resolved).isDirectory()) {
     throw new LspRequestContextParseError2("invalid_cwd", `LSP request cwd must be an existing directory: ${cwd}`);
   }
-  return realpathSync6(resolved);
+  return realpathSync7(resolved);
 }
 function canonicalizeExistingOrNearestAncestor2(path) {
   let current = resolve12(path);
   const suffix = [];
   while (true) {
     try {
-      const existing = realpathSync6(current);
+      const existing = realpathSync7(current);
       return suffix.length === 0 ? existing : join9(existing, ...suffix);
     } catch (error) {
       if (!isMissingPathError2(error))
@@ -6642,7 +6706,7 @@ function notInstalledOutcome(availability, text) {
   return decision === "declined" || decision === "allowed" ? { ...base, decision } : base;
 }
 function codexLspRequestContext(env = process.env, cwd = process.cwd()) {
-  const canonicalCwd = realpathSync7(resolve13(cwd));
+  const canonicalCwd = realpathSync8(resolve13(cwd));
   const codexHome = resolve13(env["CODEX_HOME"]?.trim() || join12(homedir4(), ".codex"));
   return parseLspRequestContext2({
     cwd: canonicalCwd,
